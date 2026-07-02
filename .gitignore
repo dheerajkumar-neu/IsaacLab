@@ -1,0 +1,20 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Data / training / run outputs (large, regenerable)
+datasets/
+logs/
+outputs/
+graphify-out/
+*.hdf5
+
+# External checkouts vendored locally (install separately)
+src/
+
+# Editor swap files
+*.swp
+
+# Isaac Sim symlink (points to the local Isaac Sim installation)
+_isaac_sim
+isaac_sim
