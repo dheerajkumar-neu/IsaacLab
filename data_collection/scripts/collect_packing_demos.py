@@ -45,6 +45,9 @@ Arguments
   --grasp_host       GraspGenX ZMQ server host (default: localhost).
   --grasp_port       GraspGenX ZMQ server port (default: 5556).
   --grasp_topk       Top-K grasps to request from server (default: 10).
+  --debug            Disable object position/orientation randomization; objects
+                     spawn at their fixed init_state poses every reset. Omit the
+                     flag to randomize object poses on the table surface (default).
 """
 
 from __future__ import annotations
@@ -193,6 +196,11 @@ parser.add_argument("--filter_radius", type=float, default=0.15,
                          "Keep this just larger than the biggest object (~0.12-0.20); "
                          "large values pull in the table and neighbouring objects, and "
                          "GraspGenX will then propose grasps on those instead.")
+parser.add_argument("--debug", action="store_true",
+                    help="Debug mode: disable object position/orientation randomization so "
+                         "objects always spawn at the fixed init_state poses defined in the "
+                         "env cfg. Without this flag, object poses are randomized on the table "
+                         "surface at every reset.")
 args = parser.parse_args()
 
 # Set up logging as early as possible — before Isaac Sim boots so we capture
@@ -784,6 +792,30 @@ def main() -> None:
     env_cfg.terminations.object_3_dropping = None
     env_cfg.terminations.success = None
 
+    # --debug: pin objects to their fixed init_state poses for reproducible runs.
+    # The env's reset_objects_pose event (see franka_pack_joint_pos_env_cfg.EventCfg)
+    # otherwise samples a fresh x/y position (and orientation, if its pose_range
+    # enables it) on the table for object_01/02/03 at every reset. Setting the term
+    # to None removes it, so scene.reset() leaves the objects at the init_state poses
+    # declared in the env cfg — same None-term idiom used for terminations above.
+    if args.debug:
+        if getattr(env_cfg.events, "reset_objects_pose", None) is not None:
+            env_cfg.events.reset_objects_pose = None
+            logging.info(
+                "--debug: object position/orientation randomization DISABLED — objects "
+                "spawn at their fixed init_state poses every reset."
+            )
+        else:
+            logging.warning(
+                "--debug given but no 'reset_objects_pose' event was found on the env cfg; "
+                "objects use whatever placement the env already defines."
+            )
+    else:
+        logging.info(
+            "Object randomization ENABLED — object poses are randomized on the table each "
+            "reset (pass --debug to pin them to their init_state poses)."
+        )
+
     env: ManagerBasedEnv = gym.make(ENV_ID, cfg=env_cfg).unwrapped
     env.reset()
 
@@ -919,6 +951,22 @@ def main() -> None:
                 float(torch.linalg.vector_norm(best_grasp.tcp_position() - obj_pos)),
                 best_grasp.downwardness(),
                 _fmt(best_grasp.position), _fmt(best_grasp.tcp_position()), _fmt(best_grasp.quaternion),
+            )
+
+            # Height audit (env-local == robot-base frame): compare the z of the
+            # commanded hand-base pose, the fingertip TCP (hand base + 0.1034 m along
+            # the grasp +z approach axis), and the object root. For a correct top-down
+            # grasp the hand base sits ~0.10 m ABOVE the object while the TCP z lands
+            # ON the object (tcp_gap ~ 0). A large |tcp_gap| means the grasp is placed
+            # off the object vertically (height problem), not merely the expected
+            # hand-base standoff. All three are in the same frame, so gaps are exact.
+            hand_z = float(best_grasp.position[2])
+            tcp_z = float(best_grasp.tcp_position()[2])
+            obj_z = float(obj_pos[2])
+            logging.debug(
+                "    [height] %s | hand_base_z=%+.4f | tcp_z=%+.4f | object_root_z=%+.4f "
+                "| hand_gap(hand-obj)=%+.4f m | tcp_gap(tcp-obj)=%+.4f m",
+                obj_name, hand_z, tcp_z, obj_z, hand_z - obj_z, tcp_z - obj_z,
             )
 
             # -- 2. Plan pick --

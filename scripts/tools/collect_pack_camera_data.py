@@ -14,14 +14,17 @@ Output — HDF5 (default, recommended for large datasets):
 
     <output_dir>/camera_data.hdf5
       /metadata/
-        cameras         : list of camera names
+        cameras         : list of camera names (taken from env_cfg.image_obs_list,
+                          e.g. wrist_cam, table_top_cam, front_cam,
+                          table_side_cam_1, table_side_cam_2)
         num_envs        : int
         image_height    : int
         image_width     : int
         intrinsics/
-          wrist_cam     : (3, 3) float32
-          table_top_cam : (3, 3) float32
-          front_cam     : (3, 3) float32
+          <cam>         : (3, 3) float32   # one per camera
+        extrinsics/
+          <cam>         : (4, 4) float32   # camera->world (env-local) transform,
+                                           # for fusing clouds into one frame
       /env_0000/
         /wrist_cam/
           rgb   : (T, H, W, 3) uint8
@@ -30,15 +33,22 @@ Output — HDF5 (default, recommended for large datasets):
         /front_cam/      ...
       /env_0001/ ...
 
-Output — images (for visual inspection):
+Output — images (for visual inspection; written for every camera):
 
     <output_dir>/
+      camera_meta.json          # intrinsics + extrinsics per camera
       env_0000/
         wrist_cam/
-          rgb/   frame_000000.png ...
-          depth/ frame_000000.npy ...  [float32, metres]
+          rgb/       frame_000000.png ...
+          depth/     frame_000000.npy ...  [float32, metres — for reconstruction]
+          depth_vis/ frame_000000.png ...  [normalized 0-255 preview, viewable]
         table_top_cam/ ...
         front_cam/ ...
+        table_side_cam_1/ ...
+        table_side_cam_2/ ...
+
+The default --save_format is 'both': the HDF5 file AND the per-camera image files
+are written in the same run.
 
 Usage:
 
@@ -77,10 +87,11 @@ parser.add_argument(
 parser.add_argument(
     "--save_format",
     type=str,
-    choices=["hdf5", "images"],
-    default="hdf5",
-    help="'hdf5' pre-allocates and streams into a single HDF5 file (fast, compact). "
-    "'images' writes per-frame PNG/NPY files (easy to inspect).",
+    choices=["hdf5", "images", "both"],
+    default="both",
+    help="'hdf5' streams into a single HDF5 file (fast, compact). 'images' writes "
+    "per-frame PNG (rgb) + NPY (depth) + a depth preview PNG per camera. 'both' "
+    "(default) writes the HDF5 AND the per-camera image files for all cameras.",
 )
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -100,7 +111,8 @@ import isaaclab_tasks  # noqa: F401  registers all envs
 from isaaclab.sensors import Camera
 from isaaclab_tasks.utils import parse_env_cfg
 
-# Names of all three cameras registered in the scene config
+# Default cameras; overridden in main() from env_cfg.image_obs_list so ALL cameras
+# registered in the scene (including table_side_cam_1/2) are captured.
 CAMERA_NAMES = ["wrist_cam", "table_top_cam", "front_cam"]
 
 
@@ -110,21 +122,63 @@ CAMERA_NAMES = ["wrist_cam", "table_top_cam", "front_cam"]
 
 
 def _to_numpy_rgb(tensor: torch.Tensor) -> np.ndarray:
-    """(num_envs, H, W, 4) GPU tensor → (num_envs, H, W, 3) uint8 numpy (drop alpha)."""
+    """(num_envs, H, W, 4) GPU tensor → (num_envs, H, W, 3) uint8 numpy (drop alpha).
+
+    Stored RAW (row 0 = top). No flip is applied so RGB, depth and the raw
+    intrinsics all share one pixel grid — required for back-projection / fusion
+    (matches how data_collection/grasp_client reads the cameras).
+    """
     arr = tensor.cpu().numpy()[..., :3].astype(np.uint8)
-    return np.ascontiguousarray(arr[:, ::1, ::1, :])  # flip H only (Isaac Sim Y-up → image convention)
+    return np.ascontiguousarray(arr)
 
 
 def _to_numpy_depth(tensor: torch.Tensor) -> np.ndarray:
-    """(num_envs, H, W, 1) GPU tensor → (num_envs, H, W) float32 numpy (metres)."""
+    """(num_envs, H, W, 1) GPU tensor → (num_envs, H, W) float32 numpy (metres).
+
+    Stored RAW (no flip) so it aligns pixel-for-pixel with the RGB image and the
+    raw intrinsic matrix. (The previous vertical flip mis-aligned depth vs RGB and
+    broke world-frame fusion.)
+    """
     arr = tensor.cpu().numpy()[..., 0].astype(np.float32)
     arr = np.where(np.isfinite(arr), arr, 0.0)
-    return np.ascontiguousarray(arr[:, ::-1, ::1])  # flip H and W (Isaac Sim Y-up → image convention)
+    return np.ascontiguousarray(arr)
 
 
 def _get_intrinsics(camera: Camera) -> np.ndarray:
     """Return the (3, 3) intrinsic matrix for env 0 as numpy array."""
     return camera.data.intrinsic_matrices[0].cpu().numpy().astype(np.float32)
+
+
+def _quat_to_R(quat_wxyz: np.ndarray) -> np.ndarray:
+    """(w, x, y, z) unit quaternion → (3, 3) rotation matrix."""
+    w, x, y, z = (float(v) for v in quat_wxyz)
+    return np.array(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _get_extrinsics(camera: Camera, env_origin: np.ndarray | None = None) -> np.ndarray:
+    """Return the (4, 4) camera→world transform for env 0.
+
+    Built from the camera's world position and ROS-optical-frame quaternion, so
+    ``world_xyz = xyz_cam @ T[:3,:3].T + T[:3,3]`` back-projects a depth pixel
+    (via the raw intrinsics) into the world/env-local frame — the same convention
+    grasp_client and the 3D viewer use. If ``env_origin`` is given the translation
+    is expressed env-local (world − origin); for a single env the origin is 0.
+    """
+    pos = camera.data.pos_w[0].cpu().numpy().astype(np.float64)
+    quat = camera.data.quat_w_ros[0].cpu().numpy().astype(np.float64)  # wxyz
+    if env_origin is not None:
+        pos = pos - np.asarray(env_origin, dtype=np.float64)
+    T = np.eye(4, dtype=np.float64)
+    T[:3, :3] = _quat_to_R(quat)
+    T[:3, 3] = pos
+    return T
 
 
 # ---------------------------------------------------------------------------
@@ -182,17 +236,30 @@ def _write_hdf5_frame(hdf5_file, frame_idx: int, cam_name: str, rgb_np: np.ndarr
 
 
 def _setup_image_dirs(output_dir: str, num_envs: int):
-    """Create the per-env / per-camera / rgb+depth subdirectory tree."""
+    """Create the per-env / per-camera / rgb+depth+depth_vis subdirectory tree."""
     from pathlib import Path
 
     for env_idx in range(num_envs):
         for cam_name in CAMERA_NAMES:
-            for sub in ("rgb", "depth"):
+            for sub in ("rgb", "depth", "depth_vis"):
                 Path(output_dir, f"env_{env_idx:04d}", cam_name, sub).mkdir(parents=True, exist_ok=True)
 
 
+def _depth_to_preview(depth: np.ndarray) -> np.ndarray:
+    """Normalize a (H,W) float depth map (metres) to a (H,W) uint8 image for viewing.
+    Valid depth spans 0-255; invalid (<=0 / non-finite) pixels are black."""
+    valid = np.isfinite(depth) & (depth > 0.0)
+    out = np.zeros(depth.shape, dtype=np.uint8)
+    if valid.any():
+        dmin = float(depth[valid].min())
+        dmax = float(depth[valid].max())
+        span = (dmax - dmin) if (dmax - dmin) > 1e-6 else 1.0
+        out[valid] = ((depth[valid] - dmin) / span * 255.0).astype(np.uint8)
+    return out
+
+
 def _write_image_frame(output_dir: str, frame_idx: int, cam_name: str, rgb_np: np.ndarray, depth_np: np.ndarray):
-    """Save per-env PNG (RGB) and NPY (depth) files for one camera, one frame."""
+    """Save per-env RGB PNG + raw depth NPY + depth preview PNG for one camera, one frame."""
     from pathlib import Path
 
     try:
@@ -207,11 +274,16 @@ def _write_image_frame(output_dir: str, frame_idx: int, cam_name: str, rgb_np: n
         base = Path(output_dir, f"env_{env_idx:04d}", cam_name)
         # RGB
         rgb_path = str(base / "rgb" / f"frame_{frame_idx:06d}.png")
+        # Depth preview (viewable), normalized per-frame
+        depth_vis = _depth_to_preview(depth_np[env_idx])
+        vis_path = str(base / "depth_vis" / f"frame_{frame_idx:06d}.png")
         if _use_pil:
             PILImage.fromarray(rgb_np[env_idx]).save(rgb_path)
+            PILImage.fromarray(depth_vis, mode="L").save(vis_path)
         else:
             cv2.imwrite(rgb_path, cv2.cvtColor(rgb_np[env_idx], cv2.COLOR_RGB2BGR))
-        # Depth (float32 metres — use .npy so precision is preserved)
+            cv2.imwrite(vis_path, depth_vis)
+        # Depth (float32 metres — .npy so precision is preserved for reconstruction)
         depth_path = str(base / "depth" / f"frame_{frame_idx:06d}.npy")
         np.save(depth_path, depth_np[env_idx])
 
@@ -224,6 +296,14 @@ def _write_image_frame(output_dir: str, frame_idx: int, cam_name: str, rgb_np: n
 def main():
     # ---- Environment setup -----------------------------------------------
     env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs)
+
+    # Capture every camera the env exposes (image_obs_list now includes the two
+    # table_side cameras), not just the original three.
+    global CAMERA_NAMES
+    img_list = getattr(env_cfg, "image_obs_list", None)
+    if img_list:
+        CAMERA_NAMES = list(img_list)
+
     env = gym.make(args_cli.task, cfg=env_cfg)
     num_envs = env.unwrapped.num_envs
 
@@ -241,18 +321,47 @@ def main():
 
     # ---- Output setup ----------------------------------------------------
     os.makedirs(args_cli.output_dir, exist_ok=True)
+    use_hdf5 = args_cli.save_format in ("hdf5", "both")
+    use_images = args_cli.save_format in ("images", "both")
     hdf5_file = None
 
-    if args_cli.save_format == "hdf5":
+    if use_hdf5:
         import h5py  # noqa: F401 — just verify it is installed before starting sim
         hdf5_path = os.path.join(args_cli.output_dir, "camera_data.hdf5")
         hdf5_file = _create_hdf5(hdf5_path, num_envs, args_cli.num_frames, H, W, cameras)
         print(f"[INFO] HDF5 file  : {hdf5_path}")
-    else:
+    if use_images:
         _setup_image_dirs(args_cli.output_dir, num_envs)
+        print(f"[INFO] Image dirs : {args_cli.output_dir}/env_XXXX/<cam>/{{rgb,depth,depth_vis}}")
+
+    # ---- Camera extrinsics (world poses) --------------------------------
+    # Capture after reset + a render so pos_w/quat are populated. These let the
+    # 3D viewer fuse the per-camera clouds into one world/env-local frame.
+    env.reset()
+    env.unwrapped.sim.render()
+    env.unwrapped.scene.update(dt=env.unwrapped.physics_dt)
+    env_origin0 = env.unwrapped.scene.env_origins[0].cpu().numpy()
+    extrinsics = {name: _get_extrinsics(cam, env_origin0) for name, cam in zip(CAMERA_NAMES, cameras)}
+    if use_hdf5:
+        extr_grp = hdf5_file["metadata"].create_group("extrinsics")
+        for name in CAMERA_NAMES:
+            extr_grp.create_dataset(name, data=extrinsics[name].astype(np.float32))
+        print("[INFO] Wrote camera extrinsics to /metadata/extrinsics")
+    if use_images:
+        import json
+
+        meta_json = {
+            "cameras": CAMERA_NAMES,
+            "image_height": H,
+            "image_width": W,
+            "intrinsics": {n: _get_intrinsics(c).tolist() for n, c in zip(CAMERA_NAMES, cameras)},
+            "extrinsics": {n: extrinsics[n].tolist() for n in CAMERA_NAMES},
+        }
+        with open(os.path.join(args_cli.output_dir, "camera_meta.json"), "w") as jf:
+            json.dump(meta_json, jf, indent=2)
+        print(f"[INFO] Wrote camera_meta.json (intrinsics + extrinsics) to {args_cli.output_dir}")
 
     # ---- Simulation loop ------------------------------------------------
-    env.reset()
     frame_idx = 0
     frames_collected = 0
 
@@ -278,9 +387,9 @@ def main():
             rgb_np   = _to_numpy_rgb(cam_out["rgb"])            # (N, H, W, 3) uint8
             depth_np = _to_numpy_depth(cam_out["distance_to_image_plane"])  # (N, H, W) float32
 
-            if args_cli.save_format == "hdf5":
+            if use_hdf5:
                 _write_hdf5_frame(hdf5_file, frames_collected, cam_name, rgb_np, depth_np)
-            else:
+            if use_images:
                 _write_image_frame(args_cli.output_dir, frames_collected, cam_name, rgb_np, depth_np)
 
         frames_collected += 1
