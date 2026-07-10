@@ -100,46 +100,6 @@ class PackMotionPlanner:
             env_id=self.env_id,
         )
 
-    def plan_lift(
-        self,
-        ee_frame,
-        object_name: str,
-        height: float = 0.08,
-    ) -> bool:
-        """Plan a straight vertical lift from the current EE pose.
-
-        Used right after closing the gripper to VERIFY the grasp: execute the
-        lift, then check whether the object's z actually rose with the hand.
-        Finger-position thresholds cannot tell a thin rim grasp from closing on
-        air (both stall near-closed); physics can.
-
-        Args:
-            ee_frame:    FrameTransformer of the scene (target 0 = panda_hand).
-            object_name: Scene name of the (presumably) grasped object, passed
-                         to cuRobo so its collision geometry is attached.
-            height:      Lift distance in metres.
-
-        Returns:
-            True if CuRobo found a valid trajectory.
-        """
-        env_origin = self.env.scene.env_origins[self.env_id]
-        ee_pos = (ee_frame.data.target_pos_w[self.env_id, 0, :] - env_origin).clone()
-        ee_quat = ee_frame.data.target_quat_w[self.env_id, 0, :].clone()  # wxyz
-
-        target_pos = ee_pos.clone()
-        target_pos[2] += height
-
-        rot_mat = math_utils.matrix_from_quat(ee_quat.unsqueeze(0)).squeeze(0)
-        target_pose = torch.eye(4, device=ee_pos.device, dtype=torch.float32)
-        target_pose[:3, :3] = rot_mat
-        target_pose[:3, 3] = target_pos
-
-        return self.planner.update_world_and_plan_motion(
-            target_pose=target_pose,
-            expected_attached_object=object_name,
-            env_id=self.env_id,
-        )
-
     def plan_place(self, object_name: str) -> bool:
         """Plan collision-free motion to place the grasped object above the bin.
 

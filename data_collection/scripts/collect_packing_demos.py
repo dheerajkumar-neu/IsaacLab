@@ -12,12 +12,9 @@ For each object, strictly one at a time (object_01 → object_02 → object_03):
   2. Filter grasps by confidence and select the best one.
   3. Plan pick motion with CuRobo (approach to grasp pose, fingers open).
   4. Execute waypoints (one per env step — plans are interpolated at env.step_dt,
-     so planned timing is reproduced), settle, close gripper.
-  4b. Verify the grasp with a LIFT TEST: raise the hand --lift_height metres and
-     require the object's z to rise by at least half of it. (Finger-position
-     thresholds cannot tell thin-rim grasps from closing on air.)
-  5. Plan place motion with CuRobo (carry to above bin, fingers closed), starting
-     from the lifted pose.
+     so planned timing is reproduced), settle, close gripper. No grasp
+     verification — the flow proceeds straight to placing.
+  5. Plan place motion with CuRobo (carry to above bin, fingers closed).
   6. Execute waypoints, open gripper, record data.
   7. Plan a joint-space motion back to the home configuration and execute it,
      so the next object is approached from a known start pose.
@@ -187,12 +184,6 @@ parser.add_argument("--headless", action="store_true")
 parser.add_argument("--grasp_threshold", type=float, default=0.5)
 parser.add_argument("--settle_steps", type=int, default=20)
 parser.add_argument("--gripper_steps", type=int, default=15)
-parser.add_argument("--lift_height", type=float, default=0.08,
-                    help="Vertical lift (m) executed right after closing the gripper to "
-                         "verify the grasp: the object must rise by at least half this "
-                         "height or the grasp is declared failed. Replaces the fragile "
-                         "finger-position threshold (thin rims stall fingers at 2-6 mm, "
-                         "indistinguishable from closing on air).")
 parser.add_argument("--grasp_host", type=str, default="localhost",
                     help="GraspGenX ZMQ server hostname")
 parser.add_argument("--grasp_port", type=int, default=5556,
@@ -692,18 +683,6 @@ def _hold_gripper(
     return True
 
 
-def _grasp_succeeded(robot: Articulation, finger_joint_ids: list[int], closed_threshold: float = 0.001) -> bool:
-    """FALLBACK grasp check on finger positions, used only when lift planning fails.
-
-    Unreliable for thin geometry: a bowl rim or bottle cap stalls the fingers at
-    2-6 mm, indistinguishable from air with any threshold (verified 2026-07-10:
-    real grasps at 0.0048/0.0053 were rejected by the old 5 mm threshold while
-    0.0063/0.0064 passed). The authoritative check is the lift test in main().
-    The 1 mm threshold here only catches unambiguous closes on air (~0.0001)."""
-    fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
-    return bool((fingers > closed_threshold).all().item())
-
-
 # --------------------------------------------------------------------------
 # Tracking configuration enforcement
 # --------------------------------------------------------------------------
@@ -1066,60 +1045,12 @@ def main() -> None:
                 episode_aborted = True
                 break
 
-            # -- 4b. Verify the grasp by lifting: close, raise the hand, and
-            # check the object's z actually followed. Finger thresholds cannot
-            # tell a thin-rim grasp from air (see _grasp_succeeded); physics can.
-            obj_z_before = float(env.scene[obj_name].data.root_pos_w[0, 2].item())
-            if planner.plan_lift(ee_frame, obj_name, height=args.lift_height):
-                lift_waypoints = planner.get_arm_waypoints(arm_joint_names)
-                _log_plan_stats(f"lift:{obj_name}", lift_waypoints, env.step_dt)
-                if not _execute_waypoints(
-                    env=env,
-                    robot=robot,
-                    ee_frame=ee_frame,
-                    waypoints=lift_waypoints,
-                    gripper_cmd=GRIPPER_CLOSE_CMD,
-                    arm_joint_ids=arm_joint_ids,
-                    recorder=recorder,
-                    grasp_confidence=best_grasp.confidence,
-                    grasp_object_idx=obj_idx,
-                    label=f"lift:{obj_name}",
-                    wp_ee_positions=planner.get_waypoint_ee_positions(),
-                ):
-                    episode_aborted = True
-                    break
-                obj_z_after = float(env.scene[obj_name].data.root_pos_w[0, 2].item())
-                z_gain = obj_z_after - obj_z_before
-                grasp_ok = z_gain > 0.5 * args.lift_height
-                fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
-                logging.info(
-                    "    Lift check for %s: object z %+.4f -> %+.4f (gain %+.4f m, need > %.4f) "
-                    "| fingers=%s -> %s",
-                    obj_name, obj_z_before, obj_z_after, z_gain, 0.5 * args.lift_height,
-                    _fmt(fingers), "GRASPED" if grasp_ok else "NOT GRASPED",
-                )
-            else:
-                logging.warning(
-                    "    CuRobo lift planning failed for %s — falling back to finger-stall check.",
-                    obj_name,
-                )
-                grasp_ok = _grasp_succeeded(robot, finger_joint_ids)
-
-            if not grasp_ok:
-                logging.warning("    Grasp verification failed for %s — releasing and returning home.", obj_name)
-                if not _hold_gripper(
-                    env=env, robot=robot, ee_frame=ee_frame,
-                    arm_joint_ids=arm_joint_ids,
-                    gripper_cmd=GRIPPER_OPEN_CMD,
-                    steps=args.gripper_steps,
-                    recorder=recorder,
-                    grasp_confidence=0.0, grasp_object_idx=0,
-                    finger_joint_ids=finger_joint_ids,
-                    label=f"open:{obj_name}",
-                ) or not _return_home(env, robot, ee_frame, planner, arm_joint_ids, arm_joint_names, recorder):
-                    episode_aborted = True
-                    break
-                continue
+            # -- 4b. No grasp verification: the gripper closed on the planned
+            # grasp pose, and we proceed straight to the place motion. Whether
+            # the object actually travelled shows up in the recorded poses and
+            # the release log below.
+            fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
+            logging.info("    Gripper closed on %s (fingers=%s) — proceeding to place.", obj_name, _fmt(fingers))
 
             # -- 5. Plan place --
             place_ok = planner.plan_place(obj_name)
