@@ -26,7 +26,7 @@ import torch
 from pxr import Usd, UsdGeom
 
 import isaaclab.utils.math as math_utils
-from data_collection.grasp_client.grasp_result import GraspResult
+from data_collection.grasp_client.grasp_result import GraspResult, graspgen_rot_to_panda_hand
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -217,8 +217,9 @@ class GraspGenXIsaacClient:
             # Env-local position (matching _mock_grasp convention)
             pos_local = (T_w[:3, 3] - env_origin).astype(np.float32)
 
-            # Rotation matrix → quaternion (wxyz)
-            rot = torch.tensor(T_w[:3, :3], dtype=torch.float32)
+            # GraspGenX canonical gripper frame → panda_hand frame (Rz +90 deg,
+            # see graspgen_rot_to_panda_hand), then rotation matrix → quaternion (wxyz)
+            rot = graspgen_rot_to_panda_hand(torch.tensor(T_w[:3, :3], dtype=torch.float32))
             quat = math_utils.quat_from_matrix(rot.unsqueeze(0)).squeeze(0)
 
             results.append(

@@ -203,6 +203,11 @@ parser.add_argument("--filter_radius", type=float, default=0.15,
                          "Keep this just larger than the biggest object (~0.12-0.20); "
                          "large values pull in the table and neighbouring objects, and "
                          "GraspGenX will then propose grasps on those instead.")
+parser.add_argument("--table_margin", type=float, default=0.015,
+                    help="Height band (m) above the lowest point of each object crop that "
+                         "is removed as table surface before querying GraspGenX. The table "
+                         "disc otherwise attracts high-confidence horizontal rim grasps "
+                         "around the object that always fail cuRobo IK. <= 0 disables.")
 parser.add_argument("--object_placement", type=str, default="random",
                     choices=["random", "fixed"],
                     help="Where objects spawn at every reset. 'random': x/y position is "
@@ -886,6 +891,7 @@ def main() -> None:
         num_grasps=200,
         topk_num_grasps=args.grasp_topk,
         filter_radius=args.filter_radius,
+        table_margin=args.table_margin,
         num_pc_points=4096,
     )
     # ---- GraspGenX USD mesh client (fallback for transparent/glass objects) ----

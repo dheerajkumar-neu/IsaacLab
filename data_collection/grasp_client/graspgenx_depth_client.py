@@ -12,9 +12,14 @@ Pipeline per query()
   3. Transform points to world frame using the camera's live world pose.
   4. Concatenate the per-camera clouds into one fused world-frame cloud.
   5. Filter to points within ``filter_radius`` metres of the target object centre.
-  6. Optionally subsample to ``num_pc_points``.
-  7. Subtract centroid (required by GraspGenX) and send to ZMQ server.
-  8. Add centroid back, subtract env_origin, wrap each SE(3) grasp as GraspResult.
+  6. Remove the table surface (lowest ``table_margin`` metres of the crop), so
+     GraspGenX sees only object geometry — table points otherwise attract
+     high-confidence pinch grasps on the rim of the cropped table disc.
+  7. Optionally subsample to ``num_pc_points``.
+  8. Subtract centroid (required by GraspGenX) and send to ZMQ server.
+  9. Add centroid back, subtract env_origin, rotate each grasp from GraspGenX's
+     canonical gripper frame to the panda_hand frame (Rz +90 deg), and wrap as
+     GraspResult.
 
 All cameras render in the same ``env.sim.render()`` call, so the fused views are
 time-consistent. Fusing multiple viewpoints (e.g. top + two lateral cameras) gives
@@ -41,7 +46,7 @@ import numpy as np
 import torch
 
 import isaaclab.utils.math as math_utils
-from data_collection.grasp_client.grasp_result import GraspResult
+from data_collection.grasp_client.grasp_result import GraspResult, graspgen_rot_to_panda_hand
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -135,6 +140,39 @@ def _filter_by_radius(
     return pts_world[dist2 <= radius ** 2]
 
 
+def _remove_table_points(
+    pts_world: np.ndarray,
+    table_margin: float,
+) -> np.ndarray:
+    """Drop the table surface from an object-cropped point cloud.
+
+    The radius crop around an object sitting on the table inevitably keeps a
+    disc of table surface. GraspGenX (trained on object-centric clouds) then
+    proposes high-confidence pinch grasps on the RIM of that disc — a ring of
+    horizontal grasps around the object at table height that cuRobo rejects
+    with IK_FAIL (hand collides with the table). Verified in the 2026-07-10
+    debug_02 run: every chosen TCP sat at table z within ~1 cm of the crop
+    radius.
+
+    The table is the lowest flat structure in the crop, so everything within
+    ``table_margin`` metres of the crop's minimum z is removed. This also trims
+    up to ``table_margin`` off the object's base — harmless, since fingers
+    cannot reach below that height anyway.
+
+    Args:
+        pts_world:    (N, 3) cropped cloud in world frame (z up).
+        table_margin: Height band above the lowest point to remove. <= 0
+                      disables the filter.
+
+    Returns:
+        (M, 3) cloud with table points removed.
+    """
+    if table_margin <= 0.0 or len(pts_world) == 0:
+        return pts_world
+    z_cut = float(pts_world[:, 2].min()) + table_margin
+    return pts_world[pts_world[:, 2] > z_cut]
+
+
 # ---------------------------------------------------------------------------
 # Depth-camera GraspGenX client
 # ---------------------------------------------------------------------------
@@ -155,6 +193,9 @@ class GraspGenXDepthClient:
         filter_radius:   Radius (metres) around the object centre to keep when
                          segmenting the scene point cloud. Tune this to cover
                          the largest object in your scene.
+        table_margin:    Height band (metres) above the crop's lowest point that
+                         is removed as table surface, so GraspGenX sees only
+                         object geometry. <= 0 disables table removal.
         num_pc_points:   Max points sent to server; ``None`` = all valid pixels.
         timeout_ms:      ZMQ request timeout in milliseconds.
     """
@@ -168,6 +209,7 @@ class GraspGenXDepthClient:
         num_grasps: int = 200,
         topk_num_grasps: int = 10,
         filter_radius: float = 0.15,
+        table_margin: float = 0.015,
         num_pc_points: int | None = 4096,
         timeout_ms: int = 60_000,
     ) -> None:
@@ -180,6 +222,7 @@ class GraspGenXDepthClient:
         self.num_grasps = num_grasps
         self.topk_num_grasps = topk_num_grasps
         self.filter_radius = filter_radius
+        self.table_margin = table_margin
         self.num_pc_points = num_pc_points
 
         _ClientClass = _load_graspgenx_client_class()
@@ -291,6 +334,17 @@ class GraspGenXDepthClient:
         obj_pos_w = obj.data.root_pos_w[env_id].cpu().numpy().astype(np.float32)  # (3,)
         pts_world = _filter_by_radius(pts_world, obj_pos_w, self.filter_radius)
 
+        # ---- 7b. Remove the table surface from the crop ------------------
+        num_before = len(pts_world)
+        pts_world = _remove_table_points(pts_world, self.table_margin)
+        if num_before:
+            logging.debug(
+                "[GraspGenXDepthClient] Table filter for '%s': %d -> %d points "
+                "(removed %d table points, margin=%.3f m)",
+                object_name, num_before, len(pts_world), num_before - len(pts_world),
+                self.table_margin,
+            )
+
         if len(pts_world) < 10:
             logging.warning(
                 "[GraspGenXDepthClient] Too few points (%d) near '%s' — check filter_radius (%.3f m)",
@@ -338,7 +392,10 @@ class GraspGenXDepthClient:
 
             pos_local = (T_w[:3, 3] - env_origin).astype(np.float32)
 
-            rot = torch.tensor(T_w[:3, :3], dtype=torch.float32)
+            # GraspGenX canonical gripper frame → panda_hand frame (Rz +90 deg,
+            # see graspgen_rot_to_panda_hand) so cuRobo closes the fingers
+            # across the axis GraspGenX actually chose.
+            rot = graspgen_rot_to_panda_hand(torch.tensor(T_w[:3, :3], dtype=torch.float32))
             quat = math_utils.quat_from_matrix(rot.unsqueeze(0)).squeeze(0)
 
             results.append(
@@ -376,4 +433,5 @@ class GraspGenXDepthClient:
 
         obj = env.scene[object_name]
         obj_pos_w = obj.data.root_pos_w[env_id].cpu().numpy().astype(np.float32)
-        return _filter_by_radius(pts_world, obj_pos_w, self.filter_radius)
+        pts_world = _filter_by_radius(pts_world, obj_pos_w, self.filter_radius)
+        return _remove_table_points(pts_world, self.table_margin)

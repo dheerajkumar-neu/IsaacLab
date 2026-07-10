@@ -17,6 +17,34 @@ from dataclasses import dataclass
 import torch
 import isaaclab.utils.math as math_utils
 
+# GraspGenX grasp poses are expressed in the gripper description's canonical
+# frame, whose root ("world" link in ext/gripper_descriptions/.../franka_panda/
+# gripper.urdf) is panda_hand rotated by +90 deg about z (world_joint has
+# rpy="0 0 1.5708"): finger travel is along x in the canonical frame vs y in
+# panda_hand. cuRobo targets the panda_hand link, so every GraspGenX rotation
+# must be post-multiplied by this Rz(+90 deg) before use as a panda_hand pose —
+# otherwise the fingers close across the wrong object axis. Translation and the
+# z approach axis are unaffected.
+_GRASPGEN_TO_PANDA_HAND_ROT = torch.tensor(
+    [[0.0, -1.0, 0.0],
+     [1.0, 0.0, 0.0],
+     [0.0, 0.0, 1.0]],
+    dtype=torch.float32,
+)
+
+
+def graspgen_rot_to_panda_hand(rot: torch.Tensor) -> torch.Tensor:
+    """Convert a GraspGenX canonical gripper-frame rotation to a panda_hand rotation.
+
+    Args:
+        rot: (3, 3) rotation matrix of the GraspGenX grasp pose.
+
+    Returns:
+        (3, 3) rotation matrix for the panda_hand target with the same approach
+        axis and the finger axis corrected by 90 deg about z.
+    """
+    return rot @ _GRASPGEN_TO_PANDA_HAND_ROT.to(device=rot.device, dtype=rot.dtype)
+
 
 @dataclass
 class GraspResult:
