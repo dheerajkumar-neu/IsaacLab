@@ -1,0 +1,7 @@
+# graphify-only overrides. These paths are excluded from git tracking via
+# .gitignore (vendored checkout / name collision with the top-level data
+# dirs) but are requested as in-scope for the knowledge graph.
+!src/
+!src/**
+!source/isaaclab/isaaclab/utils/datasets/
+!source/isaaclab/isaaclab/utils/datasets/**
