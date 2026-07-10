@@ -7,14 +7,18 @@ point clouds instead of USD-stage mesh vertices.
 
 Pipeline per query()
 --------------------
-  1. For EACH requested camera: read raw depth image + intrinsics.
-  2. Back-project every valid pixel to a 3D point in camera frame.
+  1. For EACH requested camera: read raw depth image + intrinsics, and mask the
+     depth to pixels whose semantic class matches the target object (the env cfg
+     tags objects with semantic class == scene key, and the cameras render
+     ``semantic_segmentation`` with raw IDs). Bin walls, table, robot and
+     neighbouring objects never enter the cloud.
+  2. Back-project every remaining pixel to a 3D point in camera frame.
   3. Transform points to world frame using the camera's live world pose.
   4. Concatenate the per-camera clouds into one fused world-frame cloud.
-  5. Filter to points within ``filter_radius`` metres of the target object centre.
-  6. Remove the table surface (lowest ``table_margin`` metres of the crop), so
-     GraspGenX sees only object geometry — table points otherwise attract
-     high-confidence pinch grasps on the rim of the cropped table disc.
+  5. Filter to points within ``filter_radius`` metres of the target object centre
+     (safety net; mostly redundant with the semantic mask).
+  6. Remove the table surface (lowest ``table_margin`` metres of the crop) —
+     safety net for cameras without semantic output.
   7. Optionally subsample to ``num_pc_points``.
   8. Subtract centroid (required by GraspGenX) and send to ZMQ server.
   9. Add centroid back, subtract env_origin, rotate each grasp from GraspGenX's
@@ -242,13 +246,56 @@ class GraspGenXDepthClient:
 
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _semantic_mask(
+        camera,
+        camera_name: str,
+        env_id: int,
+        target_class: str,
+    ) -> np.ndarray | None:
+        """Per-pixel mask of the pixels whose semantic class is ``target_class``.
+
+        Uses the camera's ``semantic_segmentation`` output (raw int IDs, requires
+        ``colorize_semantic_segmentation=False`` in the CameraCfg) together with
+        its ``idToLabels`` info to isolate one tagged object — e.g. the
+        ``semantic_tags=[("class", "object_01")]`` set in the env cfg.
+
+        Returns:
+            (H, W) bool array, or ``None`` if the camera has no semantic output
+            (caller falls back to geometric filtering only).
+        """
+        seg_tensor = camera.data.output.get("semantic_segmentation")
+        if seg_tensor is None:
+            return None
+        info = camera.data.info[env_id].get("semantic_segmentation") or {}
+        id_to_labels = info.get("idToLabels") or {}
+        # idToLabels: {"3": {"class": "object_01"}, ...} — ids are per-camera.
+        target_ids = [
+            int(seg_id) for seg_id, label in id_to_labels.items()
+            if target_class in (label or {}).values()
+        ]
+        if not target_ids:
+            logging.debug(
+                "[GraspGenXDepthClient] '%s' not in idToLabels of '%s' (labels: %s)",
+                target_class, camera_name, id_to_labels,
+            )
+            return np.zeros(seg_tensor.shape[1:3], dtype=bool)
+        seg = seg_tensor[env_id, ..., 0].cpu().numpy()  # (H, W) int ids
+        return np.isin(seg, target_ids)
+
     def _camera_pointcloud_world(
         self,
         camera_name: str,
         env: "ManagerBasedEnv",
         env_id: int,
+        target_class: str | None = None,
     ) -> np.ndarray | None:
         """Back-project one camera's depth image to a world-frame point cloud.
+
+        Args:
+            target_class: If given and the camera renders semantic segmentation,
+                          only depth pixels of this semantic class are kept —
+                          the returned cloud contains just that object.
 
         Returns:
             (N, 3) float32 array in world frame, or ``None`` if the camera has
@@ -265,11 +312,32 @@ class GraspGenXDepthClient:
         depth_m = depth_tensor[env_id, ..., 0].cpu().numpy().astype(np.float32)  # (H, W)
         depth_m = np.where(np.isfinite(depth_m), depth_m, 0.0)
 
+        # Semantic mask: zero out every pixel that is not the target object, so
+        # bin walls / table / neighbouring objects never reach the point cloud.
+        if target_class is not None:
+            mask = self._semantic_mask(camera, camera_name, env_id, target_class)
+            if mask is not None:
+                depth_m = np.where(mask, depth_m, 0.0)
+            else:
+                logging.warning(
+                    "[GraspGenXDepthClient] '%s' has no semantic_segmentation output — "
+                    "using geometric filters only (add it to the camera data_types).",
+                    camera_name,
+                )
+
         K = camera.data.intrinsic_matrices[env_id].cpu().numpy().astype(np.float32)  # (3, 3)
 
         pts_cam = _depth_to_pointcloud_camera_frame(depth_m, K)   # (N, 3)
         if len(pts_cam) == 0:
-            logging.warning("[GraspGenXDepthClient] Empty depth image from '%s'", camera_name)
+            if target_class is not None:
+                # Normal with semantic masking: the object is simply occluded /
+                # out of view for this camera; the other cameras cover it.
+                logging.debug(
+                    "[GraspGenXDepthClient] No '%s' pixels visible from '%s'",
+                    target_class, camera_name,
+                )
+            else:
+                logging.warning("[GraspGenXDepthClient] Empty depth image from '%s'", camera_name)
             return None
 
         cam_pos_w  = camera.data.pos_w[env_id].cpu().numpy().astype(np.float32)   # (3,)
@@ -281,8 +349,13 @@ class GraspGenXDepthClient:
         self,
         env: "ManagerBasedEnv",
         env_id: int,
+        target_class: str | None = None,
     ) -> np.ndarray | None:
         """Fuse all configured cameras into one world-frame point cloud.
+
+        Args:
+            target_class: Optional semantic class to isolate per camera (see
+                          ``_camera_pointcloud_world``).
 
         Returns:
             (N, 3) float32 array in world frame, or ``None`` if no camera
@@ -290,8 +363,8 @@ class GraspGenXDepthClient:
         """
         clouds: list[tuple[str, np.ndarray]] = []
         for cam_name in self.camera_names:
-            pts = self._camera_pointcloud_world(cam_name, env, env_id)
-            if pts is not None:
+            pts = self._camera_pointcloud_world(cam_name, env, env_id, target_class=target_class)
+            if pts is not None and len(pts) > 0:
                 clouds.append((cam_name, pts))
         if not clouds:
             return None
@@ -320,12 +393,15 @@ class GraspGenXDepthClient:
             List of :class:`GraspResult` in env-local frame, ordered by
             server confidence (highest first). Empty on failure.
         """
-        # ---- 1-6. Back-project every camera and fuse into one world cloud
-        pts_world = self._fused_pointcloud_world(env, env_id)
+        # ---- 1-6. Back-project every camera and fuse into one world cloud.
+        # The env cfg tags each object with semantic class == scene key
+        # (e.g. ("class", "object_01")), so pixels of the bin, table, robot and
+        # neighbouring objects are masked out per camera before back-projection.
+        pts_world = self._fused_pointcloud_world(env, env_id, target_class=object_name)
         if pts_world is None:
             logging.warning(
-                "[GraspGenXDepthClient] No depth points from any camera (%s)",
-                ", ".join(self.camera_names),
+                "[GraspGenXDepthClient] No '%s' points from any camera (%s)",
+                object_name, ", ".join(self.camera_names),
             )
             return []
 
@@ -427,7 +503,7 @@ class GraspGenXDepthClient:
         Returns:
             (N, 3) float32 array in world frame, or ``None`` on failure.
         """
-        pts_world = self._fused_pointcloud_world(env, env_id)
+        pts_world = self._fused_pointcloud_world(env, env_id, target_class=object_name)
         if pts_world is None:
             return None
 

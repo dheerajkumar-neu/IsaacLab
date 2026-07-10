@@ -297,7 +297,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             update_period=0.0,
             height=480,
             width=640,
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
@@ -327,7 +328,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             update_period=0.0,
             height=480,
             width=640,
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
@@ -358,7 +360,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             update_period=0.0,
             height=480,
             width=640,
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
@@ -400,7 +403,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             update_period=0.0,
             height=480,
             width=640,
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
@@ -420,7 +424,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             update_period=0.0,
             height=480,
             width=640,
-            data_types=["rgb", "distance_to_image_plane"],
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=24.0,
                 focus_distance=400.0,
