@@ -126,7 +126,10 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
         # Object 1 — cracker box (YCB physics-enabled)
         self.scene.object_01 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object01",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.05, 0.5, 0.20), rot=(0.707, 0.0, 0.707, 0.0)),
+            # Identity rotation = upright/standing, matching the orientation the
+            # reset_objects_pose event samples (roll/pitch/yaw all zero) so fixed
+            # and randomized placements agree.
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.05, 0.5, 0.20), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
                 scale=(1.0, 1.0, 1.0),
@@ -138,7 +141,8 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
         # Object 2 — mustard bottle (YCB physics-enabled)
         self.scene.object_02 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object02",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.15, 0.4, 0.20), rot=(0.707, 0.0, 0.707, 0.0)),
+            # Identity rotation = upright/standing (see object_01 note).
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.15, 0.4, 0.20), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/006_mustard_bottle.usd",
                 scale=(1.0, 1.0, 1.0),

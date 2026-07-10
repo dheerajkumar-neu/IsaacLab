@@ -45,9 +45,11 @@ Arguments
   --grasp_host       GraspGenX ZMQ server host (default: localhost).
   --grasp_port       GraspGenX ZMQ server port (default: 5556).
   --grasp_topk       Top-K grasps to request from server (default: 10).
-  --debug            Disable object position/orientation randomization; objects
-                     spawn at their fixed init_state poses every reset. Omit the
-                     flag to randomize object poses on the table surface (default).
+  --object_placement 'random' (default): object x/y positions are randomized on
+                     the table each reset; 'fixed': objects spawn at the env cfg
+                     init_state poses every reset. In BOTH modes objects spawn
+                     upright/standing (easiest geometry for GraspGenX).
+  --debug            Deprecated alias for --object_placement fixed.
 """
 
 from __future__ import annotations
@@ -201,12 +203,19 @@ parser.add_argument("--filter_radius", type=float, default=0.15,
                          "Keep this just larger than the biggest object (~0.12-0.20); "
                          "large values pull in the table and neighbouring objects, and "
                          "GraspGenX will then propose grasps on those instead.")
+parser.add_argument("--object_placement", type=str, default="random",
+                    choices=["random", "fixed"],
+                    help="Where objects spawn at every reset. 'random': x/y position is "
+                         "randomized on the table surface (orientation stays upright — the "
+                         "reset event samples roll/pitch/yaw of zero, so objects always "
+                         "STAND, which gives GraspGenX the easiest grasp geometry). "
+                         "'fixed': objects spawn at the upright init_state poses defined "
+                         "in the env cfg, identical every episode.")
 parser.add_argument("--debug", action="store_true",
-                    help="Debug mode: disable object position/orientation randomization so "
-                         "objects always spawn at the fixed init_state poses defined in the "
-                         "env cfg. Without this flag, object poses are randomized on the table "
-                         "surface at every reset.")
+                    help="Deprecated alias for --object_placement fixed.")
 args = parser.parse_args()
+if args.debug:
+    args.object_placement = "fixed"
 
 # Set up logging as early as possible — before Isaac Sim boots so we capture
 # any import-time warnings too.
@@ -797,28 +806,31 @@ def main() -> None:
     env_cfg.terminations.object_3_dropping = None
     env_cfg.terminations.success = None
 
-    # --debug: pin objects to their fixed init_state poses for reproducible runs.
-    # The env's reset_objects_pose event (see franka_pack_joint_pos_env_cfg.EventCfg)
-    # otherwise samples a fresh x/y position (and orientation, if its pose_range
-    # enables it) on the table for object_01/02/03 at every reset. Setting the term
-    # to None removes it, so scene.reset() leaves the objects at the init_state poses
-    # declared in the env cfg — same None-term idiom used for terminations above.
-    if args.debug:
+    # --object_placement fixed: pin objects to their init_state poses for reproducible
+    # runs. The env's reset_objects_pose event (see franka_pack_joint_pos_env_cfg.
+    # EventCfg) otherwise samples a fresh x/y position on the table for
+    # object_01/02/03 at every reset — orientation is always upright/standing in BOTH
+    # modes (the event samples roll/pitch/yaw of zero; the init_state rots are
+    # identity). Setting the term to None removes it, so scene.reset() leaves the
+    # objects at the init_state poses declared in the env cfg — same None-term idiom
+    # used for terminations above.
+    if args.object_placement == "fixed":
         if getattr(env_cfg.events, "reset_objects_pose", None) is not None:
             env_cfg.events.reset_objects_pose = None
             logging.info(
-                "--debug: object position/orientation randomization DISABLED — objects "
-                "spawn at their fixed init_state poses every reset."
+                "Object placement FIXED — objects spawn standing at their init_state "
+                "poses every reset."
             )
         else:
             logging.warning(
-                "--debug given but no 'reset_objects_pose' event was found on the env cfg; "
-                "objects use whatever placement the env already defines."
+                "--object_placement fixed given but no 'reset_objects_pose' event was "
+                "found on the env cfg; objects use whatever placement the env already defines."
             )
     else:
         logging.info(
-            "Object randomization ENABLED — object poses are randomized on the table each "
-            "reset (pass --debug to pin them to their init_state poses)."
+            "Object placement RANDOM — x/y positions are randomized on the table each "
+            "reset, orientation always upright/standing (pass --object_placement fixed "
+            "to pin objects to their init_state poses)."
         )
 
     env: ManagerBasedEnv = gym.make(ENV_ID, cfg=env_cfg).unwrapped
