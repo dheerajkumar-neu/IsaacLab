@@ -187,9 +187,14 @@ parser.add_argument("--grasp_port", type=int, default=5556,
                     help="GraspGenX ZMQ server port")
 parser.add_argument("--grasp_topk", type=int, default=10,
                     help="Top-K grasps to request from GraspGenX server")
-parser.add_argument("--camera_name", type=str, default="table_top_cam",
-                    help="Scene camera used for depth-based grasp generation "
-                         "(wrist_cam | table_top_cam | front_cam)")
+parser.add_argument("--cameras", type=str,
+                    default="table_top_cam,table_side_cam_1,table_side_cam_2",
+                    help="Comma-separated scene cameras whose depth clouds are fused "
+                         "into one 3D point cloud for GraspGenX. Default is the three "
+                         "table-focused cameras (top + both lateral views), which give "
+                         "GraspGenX complete object geometry instead of just the top "
+                         "surface. Available: wrist_cam, table_top_cam, front_cam, "
+                         "table_side_cam_1, table_side_cam_2.")
 parser.add_argument("--filter_radius", type=float, default=0.15,
                     help="Radius (m) around each object centre used to segment "
                          "the depth point cloud before sending to GraspGenX. "
@@ -851,8 +856,18 @@ def main() -> None:
     _read_arm_action_transform(env, arm_joint_ids)
 
     # ---- GraspGenX depth client (primary) ----
+    # Fuses the depth clouds of all requested cameras (default: top + two lateral
+    # table cameras) into one world-frame cloud per grasp query, so GraspGenX sees
+    # full 3D object geometry rather than a single viewpoint.
+    camera_names = [c.strip() for c in args.cameras.split(",") if c.strip()]
+    missing_cams = [c for c in camera_names if c not in env.scene.keys()]
+    if missing_cams:
+        raise ValueError(
+            f"--cameras contains unknown scene camera(s): {missing_cams}. "
+            f"Check the env cfg (Isaac-Pack-Object-Franka-Camera-v0) camera names."
+        )
     grasp_client = GraspGenXDepthClient(
-        camera_name=args.camera_name,
+        camera_names=camera_names,
         host=args.grasp_host,
         port=args.grasp_port,
         gripper_name="franka_panda",
@@ -870,8 +885,8 @@ def main() -> None:
         topk_num_grasps=args.grasp_topk,
     )
     logging.info(
-        "Connected to GraspGenX server at %s:%s (camera=%s, filter_radius=%.3f m)",
-        args.grasp_host, args.grasp_port, args.camera_name, args.filter_radius,
+        "Connected to GraspGenX server at %s:%s (fused cameras=%s, filter_radius=%.3f m)",
+        args.grasp_host, args.grasp_port, ",".join(camera_names), args.filter_radius,
     )
 
     # ---- motion planner ----
