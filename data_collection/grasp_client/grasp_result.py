@@ -12,6 +12,7 @@ to_world_pose() handles both cases via an optional camera-to-world transform.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import torch
@@ -129,21 +130,53 @@ def filter_grasps(
     grasps: list[GraspResult],
     confidence_threshold: float = 0.5,
     top_k: int = 1,
+    object_pos: torch.Tensor | None = None,
+    centroid_decay: float = 0.05,
 ) -> list[GraspResult]:
     """Filter and rank grasp candidates.
 
-    Applies a confidence threshold, then returns the top-K remaining grasps
-    sorted by descending confidence.  If fewer than top_k grasps survive the
-    threshold, all surviving grasps are returned.
+    Applies a confidence threshold, then ranks survivors by a composite score
+    and returns the top-K.
+
+    GraspGenX's confidence reflects finger-contact quality but is blind to
+    whether the pose is reachable on this rig — it will confidently propose
+    grasps approaching from the side, or even from underneath the table (see
+    downwardness()), which cuRobo then fails to plan. Ranking by
+    confidence * downwardness * centroid-closeness instead of raw confidence
+    pushes those candidates to the bottom without hard-rejecting them, so an
+    episode never stalls just because every candidate this round happens to
+    be geometrically mediocre (a hard downwardness filter tried previously
+    did exactly that and was reverted).
 
     Args:
         grasps:               Raw list of GraspResult from GraspGenX.
         confidence_threshold: Minimum confidence to keep a grasp.
         top_k:                Maximum number of grasps to return.
+        object_pos:           Optional (3,) object centroid, same frame as the
+                               grasps. When given, grasps whose TCP lands
+                               closer to the centroid (a fuller grip, less
+                               likely to slip off the edge) are preferred.
+                               Omit to skip this term.
+        centroid_decay:       Distance (metres) at which the centroid-distance
+                               term decays to ~37% (1/e). Only used if
+                               object_pos is given.
 
     Returns:
         Filtered and sorted list of GraspResult (best first).
     """
     surviving = [g for g in grasps if g.confidence >= confidence_threshold]
-    surviving.sort(key=lambda g: g.confidence, reverse=True)
+
+    def score(g: GraspResult) -> float:
+        downwardness_term = max(g.downwardness(), 0.0)
+        if object_pos is not None:
+            dist = float(torch.linalg.vector_norm(g.tcp_position() - object_pos))
+            centroid_term = math.exp(-dist / centroid_decay)
+        else:
+            centroid_term = 1.0
+        return g.confidence * downwardness_term * centroid_term
+
+    # Tie-break on raw confidence so a round where every candidate scores 0
+    # (e.g. nothing clears downwardness > 0) still degrades to the original
+    # confidence-only ranking instead of an arbitrary order.
+    surviving.sort(key=lambda g: (score(g), g.confidence), reverse=True)
     return surviving[:top_k]

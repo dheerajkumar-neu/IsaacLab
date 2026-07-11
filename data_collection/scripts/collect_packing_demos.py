@@ -967,9 +967,10 @@ def main() -> None:
                 logging.info("    Depth client got 0 points for %s — falling back to USD mesh client.", obj_name)
                 raw_grasps = isaac_client.query(obj_name, env, env_id=0)
 
-            # Diagnostics only (no filtering — reverted to the original selection
-            # behavior): log where the candidates sit relative to the target object
-            # and how top-down their approach directions are, purely for analysis.
+            # Log where the candidates sit relative to the target object and how
+            # top-down their approach directions are — filter_grasps() below uses
+            # these same two metrics (downwardness, TCP-to-centroid distance) to
+            # rank candidates, so this line shows the spread it's choosing from.
             if raw_grasps:
                 dists = [float(torch.linalg.vector_norm(g.tcp_position() - obj_pos)) for g in raw_grasps]
                 downs = [g.downwardness() for g in raw_grasps]
@@ -984,6 +985,7 @@ def main() -> None:
                 raw_grasps,
                 confidence_threshold=args.grasp_threshold,
                 top_k=1,
+                object_pos=obj_pos,
             )
 
             if not best_grasps:
@@ -1072,7 +1074,7 @@ def main() -> None:
             logging.info("    Gripper closed on %s (fingers=%s) — proceeding to place.", obj_name, _fmt(fingers))
 
             # -- 5. Plan place --
-            place_ok = planner.plan_place(obj_name)
+            place_ok = planner.plan_place(obj_name, slot_index=obj_idx - 1)
             if not place_ok:
                 logging.warning("    CuRobo place planning failed for %s.", obj_name)
                 # Open gripper, go home, continue to next object

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import torch
 import isaaclab.utils.math as math_utils
+import isaacsim.core.utils.bounds as bounds_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs.manager_based_env import ManagerBasedEnv
 
@@ -29,13 +30,29 @@ from data_collection.grasp_client.grasp_result import GraspResult
 _DOWN_QUAT = torch.tensor([0.0, 1.0, 0.0, 0.0], dtype=torch.float32)
 
 # How far above the bin origin to target for placement (metres).
-PLACE_HEIGHT_OFFSET: float = 0.40
+PLACE_HEIGHT_OFFSET: float = 0.25
+
+# Where each pack slot sits within the bin's own footprint, as a unit direction
+# per axis (bin-relative, not a world-frame offset) — scales automatically with
+# whatever the bin's real size turns out to be, since it's multiplied by the
+# bin's own measured half-extent (see _bin_slot_offset). One slot per object,
+# spread apart so the three objects don't all target the same point in the bin.
+_PLACE_SLOT_DIRECTIONS: list[tuple[float, float]] = [
+    (-1.0, -1.0),
+    (1.0, -1.0),
+    (0.0, 1.0),
+]
+
+# Fraction of the bin's half-extent each slot is placed at — kept well inboard
+# of the actual walls (rather than at 1.0, the wall itself) so a bulky attached
+# object still has clearance from the bin's own collision mesh at release.
+PLACE_SLOT_MARGIN: float = 0.5
 
 # Extra push along the grasp approach axis, applied to every GraspGenX hand
 # pose before planning (metres). Raw grasps can land shallow — fingers close
 # on the object's edge rather than around its body, which slips on sideways
 # or curved-surface grasps. Increase to bite deeper; trial-and-error knob.
-GRASP_DEPTH_OFFSET: float = 0.01
+GRASP_DEPTH_OFFSET: float = 0.015
 
 
 class PackMotionPlanner:
@@ -57,6 +74,7 @@ class PackMotionPlanner:
         self.env = env
         self.robot = robot
         self.env_id = env_id
+        self._bbox_cache = bounds_utils.create_bbox_cache()
 
         cfg = CuroboPlannerCfg.franka_pack_object_bin_config()
         # Sample the interpolated plan at exactly one waypoint per env control step so that
@@ -106,16 +124,37 @@ class PackMotionPlanner:
             env_id=self.env_id,
         )
 
-    def plan_place(self, object_name: str) -> bool:
+    def _bin_slot_offset(self, slot_index: int) -> torch.Tensor:
+        """XY offset (env-local, metres) for pack slot ``slot_index`` within the bin.
+
+        Measures the bin's actual world-space footprint via its USD bounding box
+        rather than assuming a fixed size, so this keeps working if the bin's
+        mesh/scale ever changes.
+        """
+        bin_prim_path = f"/World/envs/env_{self.env_id}/PackingBin"
+        aabb = bounds_utils.compute_aabb(self._bbox_cache, bin_prim_path, include_children=True)
+        half_x = float(aabb[3] - aabb[0]) / 2.0
+        half_y = float(aabb[4] - aabb[1]) / 2.0
+        dx, dy = _PLACE_SLOT_DIRECTIONS[slot_index % len(_PLACE_SLOT_DIRECTIONS)]
+        return torch.tensor(
+            [dx * half_x * PLACE_SLOT_MARGIN, dy * half_y * PLACE_SLOT_MARGIN],
+            dtype=torch.float32,
+        )
+
+    def plan_place(self, object_name: str, slot_index: int = 0) -> bool:
         """Plan collision-free motion to place the grasped object above the bin.
 
-        The target pose is PLACE_HEIGHT_OFFSET above the bin's current world
-        position, with the gripper facing straight down.
+        The target pose is PLACE_HEIGHT_OFFSET above a point within the bin's
+        footprint (see _bin_slot_offset), with the gripper facing straight down.
 
         Args:
             object_name: Isaac Lab scene name of the attached object,
                          e.g. "object_01".  Passed to CuRobo so it includes
                          the object's collision geometry when planning.
+            slot_index:  Which pack slot within the bin to target (0-based).
+                         Different objects in the same episode should use
+                         different slots so they don't all target the same
+                         point in the bin.
 
         Returns:
             True if CuRobo found a valid trajectory.
@@ -125,6 +164,7 @@ class PackMotionPlanner:
         bin_pos = (bin_obj.data.root_pos_w[self.env_id] - env_origin).clone()
 
         place_pos = bin_pos.clone()
+        place_pos[:2] += self._bin_slot_offset(slot_index).to(device=place_pos.device)
         place_pos[2] = place_pos[2] + PLACE_HEIGHT_OFFSET
 
         rot_mat = math_utils.matrix_from_quat(
