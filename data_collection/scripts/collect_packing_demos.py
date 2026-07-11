@@ -250,11 +250,13 @@ import torch  # noqa: E402
 
 from isaaclab.assets import Articulation  # noqa: E402
 from isaaclab.envs.manager_based_env import ManagerBasedEnv  # noqa: E402
+from isaaclab.managers import EventTermCfg as EventTerm, SceneEntityCfg  # noqa: E402
 from isaaclab.sensors import FrameTransformer  # noqa: E402
 
 # Register the packing env and its config
 import isaaclab_tasks.manager_based.isaaclab_int  # noqa: E402, F401
 import isaaclab_tasks.manager_based.isaaclab_int.config.franka  # noqa: E402, F401
+from isaaclab_tasks.manager_based.isaaclab_int.mdp import franka_pack_events  # noqa: E402
 
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
@@ -810,15 +812,32 @@ def main() -> None:
     # EventCfg) otherwise samples a fresh x/y position on the table for
     # object_01/02/03 at every reset — orientation is always upright/standing in BOTH
     # modes (the event samples roll/pitch/yaw of zero; the init_state rots are
-    # identity). Setting the term to None removes it, so scene.reset() leaves the
-    # objects at the init_state poses declared in the env cfg — same None-term idiom
-    # used for terminations above.
+    # identity).
+    #
+    # IMPORTANT: this event is the ONLY thing that ever calls write_root_pose_to_sim()
+    # on these objects. RigidObject.reset() (invoked by scene.reset() inside every
+    # env.reset()) only clears external-wrench buffers — it never rewrites root pose.
+    # So simply deleting the event (env_cfg.events.reset_objects_pose = None) leaves
+    # objects wherever physics put them at the end of the previous episode (e.g. still
+    # sitting in the bin) — they'd never "reset" again after the very first episode.
+    # Swap in reset_objects_to_default instead, which explicitly teleports each object
+    # back to its own init_state pose every reset.
     if args.object_placement == "fixed":
         if getattr(env_cfg.events, "reset_objects_pose", None) is not None:
-            env_cfg.events.reset_objects_pose = None
+            env_cfg.events.reset_objects_pose = EventTerm(
+                func=franka_pack_events.reset_objects_to_default,
+                mode="reset",
+                params={
+                    "asset_cfgs": [
+                        SceneEntityCfg("object_01"),
+                        SceneEntityCfg("object_02"),
+                        SceneEntityCfg("object_03"),
+                    ],
+                },
+            )
             logging.info(
-                "Object placement FIXED — objects spawn standing at their init_state "
-                "poses every reset."
+                "Object placement FIXED — objects reset to their init_state poses "
+                "every episode."
             )
         else:
             logging.warning(

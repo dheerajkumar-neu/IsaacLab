@@ -195,6 +195,33 @@ def randomize_object_pose(
             )
 
 
+def reset_objects_to_default(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    asset_cfgs: list[SceneEntityCfg],
+):
+    """Teleport each asset back to its own ``init_state`` pose, at rest.
+
+    RigidObject.reset() (called by InteractiveScene.reset() on every env.reset())
+    only clears external-wrench buffers — it does NOT write the object back to
+    its default root state. Without an explicit write_root_pose_to_sim() call
+    (as randomize_object_pose() does for the randomized-placement path), objects
+    simply stay wherever physics left them at the end of the previous episode.
+    Use this event for a "fixed placement" reset so pinned objects actually
+    reset, each to its own declared pose (they may differ, unlike
+    randomize_object_pose which samples one shared range for every asset).
+    """
+    if env_ids is None:
+        return
+
+    for asset_cfg in asset_cfgs:
+        asset = env.scene[asset_cfg.name]
+        root_states = asset.data.default_root_state[env_ids].clone()
+        root_states[:, 0:3] += env.scene.env_origins[env_ids]
+        asset.write_root_pose_to_sim(root_states[:, 0:7], env_ids=env_ids)
+        asset.write_root_velocity_to_sim(torch.zeros(len(env_ids), 6, device=env.device), env_ids=env_ids)
+
+
 def randomize_rigid_objects_in_focus(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,

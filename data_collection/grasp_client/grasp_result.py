@@ -88,13 +88,22 @@ class GraspResult:
         rot = math_utils.matrix_from_quat(self.quaternion.float().unsqueeze(0)).squeeze(0)  # (3, 3)
         return self.position.float() + rot[:, 2] * fingertip_offset
 
-    def to_world_pose(self, camera_to_world: torch.Tensor | None = None) -> torch.Tensor:
+    def to_world_pose(
+        self, camera_to_world: torch.Tensor | None = None, depth_offset: float = 0.0
+    ) -> torch.Tensor:
         """Convert grasp to a 4x4 homogeneous transform in world (env-local) frame.
 
         Args:
             camera_to_world: Optional (4, 4) float32 tensor that maps points from
                              the camera frame to the world frame.  If None, the
                              grasp is assumed to already be in world frame.
+            depth_offset:    Extra push along the grasp approach axis (+z, metres)
+                             applied to the raw GraspGenX hand position before
+                             planning. GraspGenX poses sometimes land shallow —
+                             fingers close near the object's edge instead of
+                             around its body — which holds under gravity but
+                             slips on sideways/curved grasps. Increase this to
+                             move the commanded hand pose deeper onto the object.
 
         Returns:
             (4, 4) float32 tensor representing the gripper target pose in world
@@ -104,6 +113,7 @@ class GraspResult:
         quat = self.quaternion.float()  # wxyz
 
         rot_mat = math_utils.matrix_from_quat(quat.unsqueeze(0)).squeeze(0)  # (3, 3)
+        pos = pos + rot_mat[:, 2] * depth_offset
 
         T = torch.eye(4, device=pos.device, dtype=torch.float32)
         T[:3, :3] = rot_mat

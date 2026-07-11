@@ -116,7 +116,7 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
             init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, -0.5, 0.1), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bin_blue.usd",
-                scale=(1.5, 1.5, 3.5),
+                scale=(2.5, 2.5, 1.5),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=False, disable_gravity=False),
                 mass_props=MassPropertiesCfg(mass=1.0),
                 collision_props=CollisionPropertiesCfg(),

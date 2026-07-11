@@ -29,7 +29,13 @@ from data_collection.grasp_client.grasp_result import GraspResult
 _DOWN_QUAT = torch.tensor([0.0, 1.0, 0.0, 0.0], dtype=torch.float32)
 
 # How far above the bin origin to target for placement (metres).
-PLACE_HEIGHT_OFFSET: float = 0.20
+PLACE_HEIGHT_OFFSET: float = 0.40
+
+# Extra push along the grasp approach axis, applied to every GraspGenX hand
+# pose before planning (metres). Raw grasps can land shallow — fingers close
+# on the object's edge rather than around its body, which slips on sideways
+# or curved-surface grasps. Increase to bite deeper; trial-and-error knob.
+GRASP_DEPTH_OFFSET: float = 0.01
 
 
 class PackMotionPlanner:
@@ -93,7 +99,7 @@ class PackMotionPlanner:
         Returns:
             True if CuRobo found a valid trajectory.
         """
-        target_pose = grasp.to_world_pose(camera_to_world)
+        target_pose = grasp.to_world_pose(camera_to_world, depth_offset=GRASP_DEPTH_OFFSET)
         return self.planner.update_world_and_plan_motion(
             target_pose=target_pose,
             expected_attached_object=None,
