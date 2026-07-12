@@ -428,7 +428,15 @@ class CuroboPlannerCfg:
         config.static_objects = ["bin", "table"]
         config.gripper_closed_positions = {"panda_finger_joint1": 0.024, "panda_finger_joint2": 0.024}
         config.approach_distance = 0.05
-        config.retreat_distance = 0.07
+        # Place planning starts with a retreat phase from the just-grasped pose, planned with
+        # collision disabled (the gripper/object are expected to still be touching there); the
+        # very next phase turns full collision checking back on starting from wherever that
+        # retreat left off. 0.07m is enough clearance for compact, centrally-grasped objects,
+        # but an object whose bulk hangs further from the gripper centerline (e.g. grasped
+        # off-center, or simply taller below the grasp point) can still be touching the table
+        # after only 7cm of lift, which cuRobo then rejects as INVALID_START_STATE_WORLD_COLLISION
+        # before it even attempts to plan. A larger retreat gives more margin.
+        config.retreat_distance = 0.12
         config.surface_sphere_radius = 0.01
         config.debug_planner = False
         config.collision_activation_distance = 0.02

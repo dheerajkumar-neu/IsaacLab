@@ -279,6 +279,13 @@ FINGER_JOINT_PATTERN = "panda_finger"
 # Object sequence — process in this order every episode
 OBJECT_NAMES = ["object_01", "object_02", "object_03"]
 
+# How many ranked grasp candidates to try planning before giving up on an object.
+# filter_grasps() ranks by confidence * downwardness * centroid-closeness, but the
+# top-ranked candidate can still be kinematically unreachable (e.g. a mostly-side-on
+# grasp near the table) even when lower-ranked candidates would plan fine — so a
+# single IK failure on rank 1 shouldn't cost the whole object for this episode.
+MAX_PICK_ATTEMPTS = 5
+
 
 # --------------------------------------------------------------------------
 # GraspGenX client (created once in main(), shared across all episodes)
@@ -981,46 +988,60 @@ def main() -> None:
                     max(downs), sum(downs) / len(downs),
                 )
 
-            best_grasps = filter_grasps(
+            candidate_grasps = filter_grasps(
                 raw_grasps,
                 confidence_threshold=args.grasp_threshold,
-                top_k=1,
+                top_k=MAX_PICK_ATTEMPTS,
                 object_pos=obj_pos,
             )
 
-            if not best_grasps:
+            if not candidate_grasps:
                 logging.warning("    No grasp above threshold for %s (got %d raw), skipping.", obj_name, len(raw_grasps))
                 continue
 
-            best_grasp = best_grasps[0]
-            logging.info(
-                "    Grasp: conf %.3f | TCP dist to object %.3f m | downwardness %.2f | hand pos=%s tcp=%s quat=%s",
-                best_grasp.confidence,
-                float(torch.linalg.vector_norm(best_grasp.tcp_position() - obj_pos)),
-                best_grasp.downwardness(),
-                _fmt(best_grasp.position), _fmt(best_grasp.tcp_position()), _fmt(best_grasp.quaternion),
-            )
+            # -- 2. Plan pick — try ranked candidates in turn until one plans --
+            # The top-ranked candidate is usually reachable, but not always (see
+            # MAX_PICK_ATTEMPTS above), so fall through to the next-best grasp on
+            # a planning failure instead of skipping the object outright.
+            best_grasp = None
+            pick_ok = False
+            for attempt_idx, candidate in enumerate(candidate_grasps, start=1):
+                logging.info(
+                    "    Grasp attempt %d/%d: conf %.3f | TCP dist to object %.3f m | downwardness %.2f |"
+                    " hand pos=%s tcp=%s quat=%s",
+                    attempt_idx, len(candidate_grasps),
+                    candidate.confidence,
+                    float(torch.linalg.vector_norm(candidate.tcp_position() - obj_pos)),
+                    candidate.downwardness(),
+                    _fmt(candidate.position), _fmt(candidate.tcp_position()), _fmt(candidate.quaternion),
+                )
 
-            # Height audit (env-local == robot-base frame): compare the z of the
-            # commanded hand-base pose, the fingertip TCP (hand base + 0.1034 m along
-            # the grasp +z approach axis), and the object root. For a correct top-down
-            # grasp the hand base sits ~0.10 m ABOVE the object while the TCP z lands
-            # ON the object (tcp_gap ~ 0). A large |tcp_gap| means the grasp is placed
-            # off the object vertically (height problem), not merely the expected
-            # hand-base standoff. All three are in the same frame, so gaps are exact.
-            hand_z = float(best_grasp.position[2])
-            tcp_z = float(best_grasp.tcp_position()[2])
-            obj_z = float(obj_pos[2])
-            logging.debug(
-                "    [height] %s | hand_base_z=%+.4f | tcp_z=%+.4f | object_root_z=%+.4f "
-                "| hand_gap(hand-obj)=%+.4f m | tcp_gap(tcp-obj)=%+.4f m",
-                obj_name, hand_z, tcp_z, obj_z, hand_z - obj_z, tcp_z - obj_z,
-            )
+                # Height audit (env-local == robot-base frame): compare the z of the
+                # commanded hand-base pose, the fingertip TCP (hand base + 0.1034 m along
+                # the grasp +z approach axis), and the object root. For a correct top-down
+                # grasp the hand base sits ~0.10 m ABOVE the object while the TCP z lands
+                # ON the object (tcp_gap ~ 0). A large |tcp_gap| means the grasp is placed
+                # off the object vertically (height problem), not merely the expected
+                # hand-base standoff. All three are in the same frame, so gaps are exact.
+                hand_z = float(candidate.position[2])
+                tcp_z = float(candidate.tcp_position()[2])
+                obj_z = float(obj_pos[2])
+                logging.debug(
+                    "    [height] %s | hand_base_z=%+.4f | tcp_z=%+.4f | object_root_z=%+.4f "
+                    "| hand_gap(hand-obj)=%+.4f m | tcp_gap(tcp-obj)=%+.4f m",
+                    obj_name, hand_z, tcp_z, obj_z, hand_z - obj_z, tcp_z - obj_z,
+                )
 
-            # -- 2. Plan pick --
-            pick_ok = planner.plan_pick(best_grasp)
+                if planner.plan_pick(candidate):
+                    best_grasp = candidate
+                    pick_ok = True
+                    break
+                logging.warning(
+                    "    CuRobo pick planning failed for %s (attempt %d/%d).", obj_name, attempt_idx,
+                    len(candidate_grasps),
+                )
+
             if not pick_ok:
-                logging.warning("    CuRobo pick planning failed for %s.", obj_name)
                 continue
 
             pick_waypoints = planner.get_arm_waypoints(arm_joint_names)

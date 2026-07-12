@@ -1,0 +1,75 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00225 Cup Cake Stand",
+      "source_part_name": "D00225 Cup Cake Stand",
+      "source_object_name": "D00225 Cup Cake Stand",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "stainless_steel",
+      "material": "stainless_steel",
+      "mass": 1.5,
+      "density": 2700.0,
+      "inertia": [
+        0.00945998720250211,
+        0.013060952901504731,
+        0.01313817475932429
+      ],
+      "inertia_axes": [
+        0.4999927793110899,
+        -0.5002513358660158,
+        -0.49984607097240596,
+        -0.49990971878378904
+      ],
+      "center_of_mass": [
+        0.00030623127540747635,
+        -0.00047096098960605425,
+        0.11153611457612854
+      ],
+      "part_origin_world": [
+        0.00030623127540747635,
+        -0.00047096098960605425,
+        0.11153611457612854
+      ],
+      "volume": 0.009870429168141905,
+      "bounds": {
+        "min": [
+          -0.13337905704975128,
+          0.0,
+          -0.13136723637580872
+        ],
+        "max": [
+          0.13393767178058624,
+          0.3239915072917938,
+          0.1322813332080841
+        ],
+        "center": [
+          0.0003150606971148162,
+          0.08832769500295307,
+          0.00047015986255675475
+        ]
+      },
+      "description": "A three-tiered serving stand made of matte silver metal. It features three circular trays of decreasing size from bottom to top, connected by a central cylindrical post with a ring handle at the top.",
+      "reasoning": "The object is a multi-tiered serving stand constructed entirely from a metallic material, likely aluminum or stainless steel given the matte silver finish. Its geometry is composed of three shallow cylindrical trays connected by a central post. For Isaac Sim rigid body simulation, this object should be modeled as a single rigid body or a fixed articulation if disassembly is required. The metallic material dictates a relatively high density (e.g., 2700 kg/m^3 for aluminum), resulting in a moderate mass given the thin-walled structure of the trays. Friction should be moderate (0.4-0.5 for metal-on-metal or metal-on-plastic interactions typical in a scene), and restitution should be relatively low (0.3) as metal tends to absorb energy upon impact rather than bouncing significantly. The complex shape, particularly the concavities of the trays, necessitates a convex decomposition for the collision mesh to ensure objects can be placed inside the trays without clipping or floating above the bottom surface. Continuous Collision Detection (CCD) is recommended if the stand is expected to be moved quickly or interact with small objects placed on it.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.3,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": "",
+      "confidence": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00225 Cup Cake Stand",
+  "object_description": "A three-tiered serving stand made of matte silver metal. It features three circular trays of decreasing size from bottom to top, connected by a central cylindrical post with a ring handle at the top.",
+  "total_mass": 1.5,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

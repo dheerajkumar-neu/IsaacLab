@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00160 Coffee Mug",
+      "source_part_name": "D00160 Coffee Mug",
+      "source_object_name": "D00160 Coffee Mug",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "glazed_ceramic",
+      "material": "glazed_ceramic",
+      "non_visual_material": null,
+      "mass": 0.34,
+      "density": 2300.0,
+      "inertia": [
+        0.0003395808398261374,
+        0.00034877532576273076,
+        0.000396135928035182
+      ],
+      "inertia_axes": [
+        0.6798699048114172,
+        0.6815670794418345,
+        -0.1846628301948342,
+        0.19784556577612952
+      ],
+      "center_of_mass": [
+        -0.0024134608103263118,
+        -9.779491302945526e-05,
+        0.03547965902082276
+      ],
+      "part_origin_world": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "volume": 7.711360982987691e-05,
+      "bounds": {
+        "min": [
+          -0.039432741701602936,
+          0.0,
+          -0.03338661044836044
+        ],
+        "max": [
+          0.0568731464445591,
+          0.07966231554746628,
+          0.03388649597764015
+        ],
+        "center": [
+          -0.0026406567922430645,
+          0.036025177398853026,
+          0.0001752151599727901
+        ]
+      },
+      "description": "A glossy off-white ceramic mug with a cylindrical body, rounded rim, and large loop handle. The surface appears smooth and glazed with slightly rounded ceramic edges.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "No exact product data is provided, so values are estimated for a common household ceramic mug. A typical mug of this form is approximately 90-100 mm tall, 80-85 mm in outside diameter, with 3-5 mm wall thickness, a thicker base, and an oval handle extending 35-50 mm from the side. Fired/glazed ceramic has a bulk density around 2200-2500 kg/m^3, but the object is hollow, so the actual mass is much lower than a solid cylinder of the same bounding volume. Estimating the ceramic wall, bottom, rim, and handle volume gives roughly 1.4e-4 to 1.7e-4 m^3 of ceramic, producing a realistic empty mass of about 0.32-0.38 kg; 0.34 kg is used. The dominant contact material is smooth glazed ceramic, so friction is moderate: lower than rubber and rough wood, but higher than polished glass on many surfaces. Static friction is estimated at 0.42 and dynamic friction at 0.32. Restitution is set to 0.35: ceramic is hard, but a mug shape dissipates impact energy through ringing, micro-sliding, and possible chipping; since fracture is not modeled, a low-to-moderate bounce is appropriate. For collision, a single convex hull would incorrectly seal the cup opening and fill the handle loop, while a bounding box or sphere would be too inaccurate. Convex decomposition is the best general-purpose PhysX choice for a dynamic rigid mug: use separate hulls for the cylindrical wall, bottom, rim, and curved handle segments. If high-fidelity interaction with the interior cavity is required, an SDF or carefully decomposed collision mesh can be substituted at higher cost. Contact offset is kept small, around 2 mm, to avoid visible hovering while still producing stable contacts for the thin rim and handle. Rest offset is 0 so the visible ceramic surface aligns closely to the contact surface. CCD is recommended because the rim and handle are thin relative to possible drop velocities and may otherwise tunnel through surfaces. The mug is a single rigid body with no joints or articulation. Center of mass is expected to be slightly shifted toward the handle and slightly below the geometric midpoint because of the thicker base.",
+      "static_friction": 0.42,
+      "dynamic_friction": 0.32,
+      "restitution": 0.35,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00160 Coffee Mug",
+  "object_description": "A glossy off-white ceramic mug with a cylindrical body, rounded rim, and large loop handle. The surface appears smooth and glazed with slightly rounded ceramic edges.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.34,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

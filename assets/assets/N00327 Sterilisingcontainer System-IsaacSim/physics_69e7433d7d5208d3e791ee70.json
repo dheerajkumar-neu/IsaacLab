@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_sterilisingcontainersystem_d02_01",
+      "part_name": "sm_sterilisingcontainersystem_d02_01",
+      "source_part_name": "sm_sterilisingcontainersystem_d02_01",
+      "source_object_name": "sm_sterilisingcontainersystem_d02_01",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "stainless_steel",
+      "material": "stainless_steel",
+      "mass": 0.35,
+      "density": 7900.0,
+      "inertia": [
+        0.0009309945323211478,
+        0.0009310020544344128,
+        0.001513014272552918
+      ],
+      "inertia_axes": [
+        3.7703279103795976e-08,
+        0.9238434265558919,
+        -0.3827705882241535,
+        5.080177668705848e-08
+      ],
+      "center_of_mass": [
+        -2.748884712303123e-09,
+        -4.3266575164266304e-08,
+        0.030025356235223424
+      ],
+      "part_origin_world": [
+        -2.748884712303123e-09,
+        -4.3266575164266304e-08,
+        0.030025356235223424
+      ],
+      "volume": 0.00013601215257776075,
+      "bounds": {
+        "min": [
+          -0.085972,
+          0.0,
+          -0.085972
+        ],
+        "max": [
+          0.085972,
+          0.069368,
+          0.085972
+        ],
+        "center": [
+          0.0,
+          0.034684,
+          0.0
+        ]
+      },
+      "description": "Main structural body of the medical bowl.",
+      "reasoning": "A single metal part forming a bowl. Dimensions suggest ~17cm diameter. Assuming 1mm thick steel, mass is estimated at 0.35kg.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.4,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "target_metallic": 1.0,
+      "target_roughness": 0.3,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Red",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "sm_sterilisingcontainersystem_d02_01",
+  "object_description": "A single-part rigid stainless steel sterilizing bowl.",
+  "total_mass": 0.35,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "Simple, stable setup for a single-part rigid body.",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

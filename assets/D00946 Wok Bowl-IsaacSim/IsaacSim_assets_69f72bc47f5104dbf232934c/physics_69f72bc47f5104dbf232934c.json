@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00946 Wok Bowl",
+      "source_part_name": "D00946 Wok Bowl",
+      "source_object_name": "D00946 Wok Bowl",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "steel",
+      "material": "steel",
+      "non_visual_material": null,
+      "mass": 3.2,
+      "density": 7200.0,
+      "inertia": [
+        0.01633511019173328,
+        0.049443344663311815,
+        0.0616664985726096
+      ],
+      "inertia_axes": [
+        0.05140654092015343,
+        -0.7066222438173649,
+        -0.7038434977968285,
+        -0.05144611454972198
+      ],
+      "center_of_mass": [
+        0.00034338754420523704,
+        0.018417529335530862,
+        0.04565813562218248
+      ],
+      "part_origin_world": [
+        0.00034338754420523704,
+        0.018417529335530862,
+        0.04565813562218248
+      ],
+      "volume": 0.0006627926416220202,
+      "bounds": {
+        "min": [
+          -0.1414979249238968,
+          0.0,
+          -0.31744495034217834
+        ],
+        "max": [
+          0.14159607887268066,
+          0.11461002379655838,
+          0.18854208290576935
+        ],
+        "center": [
+          8.675494853853862e-05,
+          0.041636424581488675,
+          0.00528627805917722
+        ]
+      },
+      "description": "A black seasoned cast-iron wok with a rounded bowl, small side loop handle, and a long dark handle with an end hanging hole. The surface is slightly textured and semi-gloss from the dark metal finish.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The object appears to be a medium-to-large cast-iron or heavy carbon-steel wok with a hollow concave bowl, raised rim, small helper handle, long handle, and a small circular foot/base ring. With no product dimensions supplied, I estimate a bowl diameter of about 0.30-0.34 m, bowl depth of about 0.08-0.10 m, wall thickness around 3-4 mm for cast iron, and handle length around 0.22-0.28 m. A spherical-cap shell approximation for a 0.32 m diameter, 0.09 m deep bowl at 3.5 mm thickness gives roughly 0.00037 m^3 of iron, or about 2.6-2.8 kg at cast-iron density. Adding the rim, foot ring, helper handle, neck, and long handle brings the total estimated mass to approximately 3.2 kg. The density value is set near cast iron rather than using the full bounding volume, because the object is a hollow shell and should be mass-authored directly in USD/PhysX rather than inferred from a solid convex hull. Friction is estimated for dark seasoned cast iron: moderately high static friction on common surfaces, but lower than rubber; static friction around 0.55 and dynamic friction around 0.42 are appropriate. Restitution is kept low at 0.25 because cookware impacts are damped by the hollow geometry, rough coating, and possible handle insert; a higher steel-like restitution would make the pan unrealistically bouncy. For collision, the wok is concave and hollow, so a single convex hull would fill the bowl and prevent objects from resting inside. For accurate interaction with the interior, use SDF mesh collision if available, or convex decomposition with separate simplified parts for outer bowl, inner bowl/rim, foot ring, and handles. Contact offset of 0.01 m and rest offset of 0.001 m are conservative Isaac Sim v4.5 values for stable contacts with a thin rim and curved shell; reduce slightly if precise nesting is required. CCD is recommended for this asset if it can be dropped, tossed, or moved quickly because the rim and handle are relatively thin compared with likely velocities; otherwise it can be disabled for performance in slow manipulation scenes. Gravity is standard Earth gravity. No articulation is present; all articulation fields are therefore neutral/default.",
+      "static_friction": 0.55,
+      "dynamic_friction": 0.42,
+      "restitution": 0.25,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00946 Wok Bowl",
+  "object_description": "A black seasoned cast-iron wok with a rounded bowl, small side loop handle, and a long dark handle with an end hanging hole. The surface is slightly textured and semi-gloss from the dark metal finish.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 3.2,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

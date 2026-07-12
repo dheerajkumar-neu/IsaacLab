@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00231 Cup Kettle",
+      "source_part_name": "D00231 Cup Kettle",
+      "source_object_name": "D00231 Cup Kettle",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "brushed_stainless_steel",
+      "material": "brushed_stainless_steel",
+      "non_visual_material": null,
+      "mass": 0.95,
+      "density": 7850.0,
+      "inertia": [
+        0.003110981944791558,
+        0.0034657952308409182,
+        0.003977603566839707
+      ],
+      "inertia_axes": [
+        0.5401084976008412,
+        0.5439623038992684,
+        0.45545286943149216,
+        -0.45271459716092916
+      ],
+      "center_of_mass": [
+        0.0015356097983044434,
+        7.53821341852852e-05,
+        0.07262783043062841
+      ],
+      "part_origin_world": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "volume": 0.0032017516861902484,
+      "bounds": {
+        "min": [
+          -0.1198439970612526,
+          -0.05540100112557411,
+          -0.00011000000085914508
+        ],
+        "max": [
+          0.09750200062990189,
+          0.055337000638246536,
+          0.18247799575328827
+        ],
+        "center": [
+          -0.0015305650778030112,
+          -3.623181043883846e-05,
+          0.07906091650163927
+        ]
+      },
+      "description": "A brushed stainless steel kettle with a rounded domed body, cylindrical spout, arched metal handle, fitted lid, and small knob. The exterior is metallic silver with rolled rim details and a hollow vessel form.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The object appears to be an empty stainless steel stovetop kettle/teapot. No exact product data is provided, so dimensions and mass are estimated from typical household kettles of this form: approximate body diameter 0.20-0.23 m, body height 0.13-0.16 m, overall height including handle 0.27-0.32 m, and overall length including spout about 0.30 m. A thin-wall stainless kettle of this size usually has a shell thickness around 0.5-0.8 mm plus reinforced rolled edges, handle mounts, lid, and knob, giving an empty mass around 0.8-1.2 kg; 0.95 kg is a realistic nominal estimate. The dominant physical/contact material is brushed stainless steel, so the material density is set near 7850 kg/m^3. In practice, because this is a hollow thin-shell object, Isaac Sim should use an explicitly authored mass rather than deriving mass from a filled convex volume at steel density, which would greatly overestimate the mass. Static friction is estimated at 0.50 and dynamic friction at 0.40 for brushed stainless steel contacting common industrial/table surfaces; this is within the typical steel range and slightly conservative for smooth metal. Restitution is set to 0.55: metal is relatively elastic, but the thin hollow body and rolled seams dissipate energy through vibration and local deformation, so it should not bounce like a solid steel ball. For collision geometry, a convex decomposition is preferred over a single convex hull because the handle opening, protruding spout, lid/knob, and domed body create nonconvex features. A single convex hull would fill the handle gap and over-approximate the spout/body silhouette, while an SDF or triangle mesh is only necessary if high-accuracy contact inside the handle/spout is required. For real-time rigid-body use, decompose into several convex parts: domed body, spout tube, handle arc, lid disk, and knob. Rest offset is kept at 0.0 m for visual alignment, while contact offset is set to 0.002 m to 0.005 m scale; 0.003 m is a good default for a 20-30 cm object to generate stable contacts without visibly floating. CCD is recommended because the thin spout and handle can tunnel during fast manipulation or drops, especially if small convex parts are used. Initial velocities are zero and gravity is standard Earth gravity. Compliant contacts are disabled for the non-deformable metal body; a very stiff/damped contact setting can be used only if numerical chatter occurs on metal/table contact. Articulations are not applicable because the kettle is best represented as one rigid body with fixed sub-colliders; the lid may be authored as a separate rigid body if removable behavior is desired, but for a single asset it should be fixed to the main body for stability.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.55,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00231 Cup Kettle",
+  "object_description": "A brushed stainless steel kettle with a rounded domed body, cylindrical spout, arched metal handle, fitted lid, and small knob. The exterior is metallic silver with rolled rim details and a hollow vessel form.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.95,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

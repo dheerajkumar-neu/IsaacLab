@@ -1,0 +1,154 @@
+{
+  "parts": [
+    {
+      "canonical_name": "M_FStyleJug_A01_Body",
+      "part_name": "M_FStyleJug_A01_Body",
+      "source_part_name": "M_FStyleJug_A01_Body",
+      "source_object_name": "M_FStyleJug_A01_Body",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "hdpe_plastic",
+      "material": "hdpe_plastic",
+      "mass": 0.08,
+      "density": 950.0,
+      "inertia": [
+        0.00018609903101446425,
+        0.0003074925502148131,
+        0.0004284565538315632
+      ],
+      "inertia_axes": [
+        0.7116031728094733,
+        -0.0069901487722663445,
+        0.7025055380606106,
+        -0.007617825267398102
+      ],
+      "center_of_mass": [
+        0.0006183590693781899,
+        0.0005677178555672912,
+        0.08577403950089857
+      ],
+      "part_origin_world": [
+        0.0006183590693781899,
+        0.0005677178555672912,
+        0.08577403950089857
+      ],
+      "volume": 5.179689033349454e-05,
+      "bounds": {
+        "min": [
+          -0.027747,
+          -0.067814,
+          0.0
+        ],
+        "max": [
+          0.027747,
+          0.067814,
+          0.192955
+        ],
+        "center": [
+          0.0,
+          0.0,
+          0.096477
+        ]
+      },
+      "description": "Main plastic container with a molded handle, designed to hold and pour liquids.",
+      "reasoning": "The main body is a hollow plastic container. HDPE is standard for this type of jug. The mass is estimated for an empty ~1-liter container.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": "Red",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "M_FStyleJug_A01_Cover",
+      "part_name": "M_FStyleJug_A01_Cover",
+      "source_part_name": "M_FStyleJug_A01_Cover",
+      "source_object_name": "M_FStyleJug_A01_Cover",
+      "part_index": 1,
+      "part_id": "part_01",
+      "material_name": "hdpe_plastic",
+      "material": "hdpe_plastic",
+      "mass": 0.01,
+      "density": 950.0,
+      "inertia": [
+        5.177846743597085e-07,
+        5.177889993484009e-07,
+        1.004266826016843e-06
+      ],
+      "inertia_axes": [
+        8.741451057175671e-06,
+        0.9351078728321085,
+        -0.35436318387562854,
+        2.12696792860799e-06
+      ],
+      "center_of_mass": [
+        2.7366653286567348e-08,
+        -0.04159307138355335,
+        0.1901201821487074
+      ],
+      "part_origin_world": [
+        2.7366653286567348e-08,
+        -0.04159307138355335,
+        0.1901201821487074
+      ],
+      "volume": 1.6497782441767124e-06,
+      "bounds": {
+        "min": [
+          -0.01395,
+          -0.055541,
+          0.183509
+        ],
+        "max": [
+          0.01395,
+          -0.027646,
+          0.191922
+        ],
+        "center": [
+          0.0,
+          -0.041593,
+          0.187716
+        ]
+      },
+      "description": "Threaded plastic lid that seals the pouring spout of the jug.",
+      "reasoning": "A screw-on cap. In a rigid body articulation, this is typically modeled as a revolute joint around the vertical (Z) axis to allow simulated unscrewing.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "color_name": "Blue",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [
+    {
+      "child": "M_FStyleJug_A01_Cover",
+      "parent": "M_FStyleJug_A01_Body",
+      "joint_type": "fixed",
+      "name": "joint_m_fstylejug_a01_body__m_fstylejug_a01_cover",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    }
+  ],
+  "base_link": "M_FStyleJug_A01_Body",
+  "object_description": "A plastic F-style jug typically used for industrial liquids or motor oil. Features a rigid main container body and a screw-on cap modeled with a vertical rotation axis for unscrewing.",
+  "total_mass": 0.09,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "Simple, robust articulation with an easily interactable twist-off cap and realistic lightweight physics for an empty plastic bottle.",
+  "num_parts": 2,
+  "object_type": "rigid_bodies"
+}

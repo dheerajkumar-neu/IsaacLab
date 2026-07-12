@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00752 Spatula Ladle",
+      "source_part_name": "D00752 Spatula Ladle",
+      "source_object_name": "D00752 Spatula Ladle",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "stainless_steel",
+      "material": "stainless_steel",
+      "non_visual_material": null,
+      "mass": 0.18,
+      "density": 7850.0,
+      "inertia": [
+        9.522653969076445e-05,
+        0.0005088239964671756,
+        0.000550815490705927
+      ],
+      "inertia_axes": [
+        0.9759309170181268,
+        -0.0005210655808557013,
+        -0.21807925642325013,
+        -0.00010778080009900052
+      ],
+      "center_of_mass": [
+        0.0045148126667704435,
+        0.00015993459110327023,
+        0.04745785498080426
+      ],
+      "part_origin_world": [
+        0.0045148126667704435,
+        0.00015993459110327023,
+        0.04745785498080426
+      ],
+      "volume": 0.00048216615473359987,
+      "bounds": {
+        "min": [
+          -0.2149749994277954,
+          -0.04303000122308731,
+          -0.00030499999411404133
+        ],
+        "max": [
+          0.1145239993929863,
+          0.04318299889564514,
+          0.05976099893450737
+        ],
+        "center": [
+          0.0008930873771737597,
+          1.9126565706182415e-05,
+          0.029630779460320823
+        ]
+      },
+      "description": "A stainless-steel soup ladle with a hemispherical bowl, long tapered handle, and oval hanging hole. Variants show brushed or polished metal finishes with optional wood or black plastic grip sections.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The estimates assume one representative full-size kitchen ladle, not the entire image collage; if the imported asset contains multiple ladles as one rigid body, multiply the mass by the number of ladles. A typical ladle is about 0.30-0.36 m long, with an 80-100 mm diameter bowl and thin stamped stainless-steel construction around 0.8-1.2 mm thick. A hemispherical stainless bowl contributes roughly 0.07-0.10 kg, the pressed handle and neck add about 0.05-0.08 kg, and rivets/grip inserts add a small amount, giving a realistic total near 0.18 kg. Stainless steel material density is approximately 7850 kg/m^3, but in Isaac Sim an explicit MassAPI mass is recommended because collision hull volume will not equal the true thin-shell metal volume. The center of mass should lie close to the bowl/neck region rather than the geometric center of the full length, approximately 35-45% of the way from the bowl center toward the handle tip. Surface friction is estimated for brushed stainless steel against common hard surfaces: static friction about 0.50 and dynamic friction about 0.35. Optional wood grips would locally raise friction to about 0.55 static, while black polymer/rubberized grips could be 0.7-0.9 static, but the dominant contact material is metal. Restitution is set to 0.45: solid steel can rebound more, but a thin ladle dissipates energy through shell vibration, ringing, and edge impacts. The bowl is concave and thin, so a single convex hull is not recommended because it would seal the bowl and produce incorrect contacts. For a dynamic rigid body, convex decomposition is the best default: use several convex pieces around the bowl shell plus one to three hulls for the handle; ignore the small hanging-slot hole unless precise hooking interactions are required. If the concave bowl interior must physically contain small objects, an SDF mesh collider with millimeter-scale resolution is more accurate but more expensive. Contact offset should be small relative to the utensil size, around 0.003 m, with rest offset near 0.0 m to prevent visible floating while still generating stable contact constraints. CCD is recommended because the ladle has thin edges and a long handle that can tunnel during fast tumbling. For Isaac Sim v4.5, use 120 Hz if the ladle is dropped, spun, or grasped, and consider velocity limits around 5-10 m/s linear and 50-100 rad/s angular. A low sleep threshold around 0.001-0.003 m^2/s^2 is appropriate so the object can settle without excessive jitter. Compliant contacts should normally remain disabled for a rigid stainless utensil; if gripper chatter occurs, use very stiff compliance, roughly 1e6-5e6 N/m with 1000-3000 N*s/m damping.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.35,
+      "restitution": 0.45,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00752 Spatula Ladle",
+  "object_description": "A stainless-steel soup ladle with a hemispherical bowl, long tapered handle, and oval hanging hole. Variants show brushed or polished metal finishes with optional wood or black plastic grip sections.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.18,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

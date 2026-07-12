@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from pathlib import Path
+
 import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -21,6 +23,9 @@ from isaaclab_tasks.manager_based.isaaclab_int.packing_env_cfg import IsaaclabIn
 
 from isaaclab.markers.config import FRAME_MARKER_CFG  # isort: skip
 from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG  # isort: skip
+
+# Local candidate-object assets (see repo `assets/` folder). Repo root is 7 levels above this file.
+_ISAACLAB_ASSETS_DIR = Path(__file__).resolve().parents[7] / "assets"
 
 
 @configclass
@@ -123,15 +128,22 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
             ),
         )
 
-        # Object 1 — cracker box (YCB physics-enabled)
+        # Object 1 — stainless-steel spatula/ladle (local SimReady asset)
+        # Physics (rigid body, per-part convex-hull colliders, mass=0.18kg, friction/restitution
+        # material) is already authored on this asset, so no collision_props/mass_props override
+        # is needed here — same as objects 02/03 below.
         self.scene.object_01 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object01",
             # Identity rotation = upright/standing, matching the orientation the
             # reset_objects_pose event samples (roll/pitch/yaw all zero) so fixed
             # and randomized placements agree.
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.05, 0.5, 0.20), rot=(1.0, 0.0, 0.0, 0.0)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.05, 0.8, 0.20), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
-                usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
+                usd_path=str(
+                    _ISAACLAB_ASSETS_DIR
+                    / "N00327 Sterilisingcontainer System-IsaacSim"
+                    / "IsaacSim_asset_69e7433d7d5208d3e791ee70.usd"
+                ),
                 scale=(1.0, 1.0, 1.0),
                 rigid_props=object_properties,
                 semantic_tags=[("class", "object_01")],
@@ -142,9 +154,14 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
         self.scene.object_02 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object02",
             # Identity rotation = upright/standing (see object_01 note).
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.15, 0.4, 0.20), rot=(-0.707, 0.707, 0.0, 0.0)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.15, 0.5, 0.20), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/006_mustard_bottle.usd",
+                # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/006_mustard_bottle.usd",
+                usd_path=str(
+                    _ISAACLAB_ASSETS_DIR
+                    / "N02017 Whitepackerbottle-IsaacSim"
+                    / "IsaacSim_asset_69eca8e8c917ed99cd3ad807.usd"
+                ),
                 scale=(1.0, 1.0, 1.0),
                 rigid_props=object_properties,
                 semantic_tags=[("class", "object_02")],
@@ -154,9 +171,15 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
         # Object 3 — sugar box (YCB physics-enabled)
         self.scene.object_03 = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object03",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.20, 0.7, 0.20), rot=(0.707, 0.707, 0.0, 0.0)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.20, 0.7, 0.10), rot=(1.0, 0.0, 0.0, 0.0)),
             spawn=UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/004_sugar_box.usd",
+                # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/004_sugar_box.usd",
+                usd_path=str(
+                    _ISAACLAB_ASSETS_DIR
+                    / "D00160 Coffee Mug-IsaacSim" 
+                    / "IsaacSim_assets_69fef61ff3726e6ad05387d4" 
+                    / "IsaacSim_asset_69fef61ff3726e6ad05387d4.usd"
+                ),
                 scale=(1.0, 1.0, 1.0),
                 rigid_props=object_properties,
                 semantic_tags=[("class", "object_03")],

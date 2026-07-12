@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_sterilisingcontainersystem_b03_01",
+      "part_name": "sm_sterilisingcontainersystem_b03_01",
+      "source_part_name": "sm_sterilisingcontainersystem_b03_01",
+      "source_object_name": "sm_sterilisingcontainersystem_b03_01",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "stainless_steel",
+      "material": "stainless_steel",
+      "mass": 0.5,
+      "density": 7900.0,
+      "inertia": [
+        0.002164600047019907,
+        0.004152180013187009,
+        0.006152161776214042
+      ],
+      "inertia_axes": [
+        0.9999999999994612,
+        3.671581803208513e-07,
+        1.1491766871429828e-08,
+        9.709313892613697e-07
+      ],
+      "center_of_mass": [
+        -1.117206228287916e-06,
+        -8.045866605169949e-07,
+        0.015884252645482266
+      ],
+      "part_origin_world": [
+        -1.117206228287916e-06,
+        -8.045866605169949e-07,
+        0.015884252645482266
+      ],
+      "volume": 0.0002229875077152312,
+      "bounds": {
+        "min": [
+          -0.150002,
+          0.000193,
+          -0.104997
+        ],
+        "max": [
+          0.150001,
+          0.040012,
+          0.104999
+        ],
+        "center": [
+          -1e-06,
+          0.020102,
+          1e-06
+        ]
+      },
+      "description": "Rectangular stainless steel tray used for holding and sterilizing medical instruments.",
+      "reasoning": "The part is a single metal tray. Visuals indicate brushed stainless steel, common for medical trays. Set as the structural root with realistic steel density and friction.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.3,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "target_metallic": 1.0,
+      "target_roughness": 0.3,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Red",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "sm_sterilisingcontainersystem_b03_01",
+  "object_description": "A rectangular stainless steel tray used for medical sterilization. Modeled as a single rigid structural body.",
+  "total_mass": 0.5,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "Simple single-part object, ready for rigid body simulation.",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

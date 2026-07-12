@@ -1,0 +1,154 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_tool_hammer_a02_body_01",
+      "part_name": "sm_tool_hammer_a02_body_01",
+      "source_part_name": "sm_tool_hammer_a02_body_01",
+      "source_object_name": "sm_tool_hammer_a02_body_01",
+      "part_index": 0,
+      "part_id": "part_01",
+      "material_name": "hickory_wood",
+      "material": "hickory_wood",
+      "mass": 0.2,
+      "density": 750.0,
+      "inertia": [
+        1.4768437235600793e-05,
+        0.0014247379829895918,
+        0.0014291011523086792
+      ],
+      "inertia_axes": [
+        0.5000410188521541,
+        -0.5000656932202611,
+        -0.49993471855362065,
+        -0.4999585573966622
+      ],
+      "center_of_mass": [
+        0.001058612587497289,
+        -2.1425349603057924e-07,
+        -0.014907535248637362
+      ],
+      "part_origin_world": [
+        0.001058612587497289,
+        -2.1425349603057924e-07,
+        -0.014907535248637362
+      ],
+      "volume": 0.00012688465086801035,
+      "bounds": {
+        "min": [
+          -0.013445,
+          -0.152238,
+          -0.010637
+        ],
+        "max": [
+          0.015572,
+          0.151336,
+          0.010637
+        ],
+        "center": [
+          0.001064,
+          -0.000451,
+          0.0
+        ]
+      },
+      "description": "Wooden shaft providing grip and leverage for striking.",
+      "reasoning": "The handle is the primary body of the standalone tool. Estimated mass is 0.2kg based on the volume of a 30cm wooden shaft.",
+      "static_friction": 0.6,
+      "dynamic_friction": 0.5,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": "Red",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_tool_hammer_a02_hammer_01",
+      "part_name": "sm_tool_hammer_a02_hammer_01",
+      "source_part_name": "sm_tool_hammer_a02_hammer_01",
+      "source_object_name": "sm_tool_hammer_a02_hammer_01",
+      "part_index": 1,
+      "part_id": "part_00",
+      "material_name": "forged_steel",
+      "material": "forged_steel",
+      "mass": 0.6,
+      "density": 7850.0,
+      "inertia": [
+        7.684432123416406e-05,
+        0.00044351592355226235,
+        0.00046989156590104174
+      ],
+      "inertia_axes": [
+        0.7051368255146709,
+        -0.7051376829873014,
+        -0.05273944008883158,
+        -0.05273951832837706
+      ],
+      "center_of_mass": [
+        0.003944117592483881,
+        4.079315021373914e-09,
+        0.13130792284079618
+      ],
+      "part_origin_world": [
+        0.003944117592483881,
+        4.079315021373914e-09,
+        0.13130792284079618
+      ],
+      "volume": 7.00725720446548e-05,
+      "bounds": {
+        "min": [
+          -0.052018,
+          0.112552,
+          -0.012863
+        ],
+        "max": [
+          0.05219,
+          0.152239,
+          0.012863
+        ],
+        "center": [
+          8.6e-05,
+          0.132395,
+          0.0
+        ]
+      },
+      "description": "Heavy forged steel head with a flat striking face and a curved claw.",
+      "reasoning": "The dense steel head provides the striking force. It is permanently fixed to the handle. Estimated mass is 0.6kg based on typical hammer head proportions.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.4,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "color_name": "Blue",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [
+    {
+      "child": "sm_tool_hammer_a02_hammer_01",
+      "parent": "sm_tool_hammer_a02_body_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_tool_hammer_a02_body_01__sm_tool_hammer_a02_hammer_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    }
+  ],
+  "base_link": "sm_tool_hammer_a02_body_01",
+  "object_description": "A standalone claw hammer tool. The heavy steel head is rigidly attached to the wooden handle. The entire object simulates as a single independent body.",
+  "total_mass": 0.8,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "The hammer will simulate realistically as a solid, unified rigid body with an accurate mass distribution favoring the heavier steel head.",
+  "num_parts": 2,
+  "object_type": "rigid_bodies"
+}

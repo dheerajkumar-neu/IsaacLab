@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00788 Spoon Wooden",
+      "source_part_name": "D00788 Spoon Wooden",
+      "source_object_name": "D00788 Spoon Wooden",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "varnished_hardwood",
+      "material": "varnished_hardwood",
+      "non_visual_material": null,
+      "mass": 0.045,
+      "density": 650.0,
+      "inertia": [
+        9.574622068161461e-06,
+        0.00022103051542887996,
+        0.0002278070709487366
+      ],
+      "inertia_axes": [
+        0.0002839728729703339,
+        -0.9999695203600998,
+        -3.1323471152689554e-05,
+        0.007802354070389352
+      ],
+      "center_of_mass": [
+        0.007262876389580889,
+        7.067391506551211e-05,
+        0.012035091462447417
+      ],
+      "part_origin_world": [
+        0.007262876389580889,
+        7.067391506551211e-05,
+        0.012035091462447417
+      ],
+      "volume": 0.00021827681790887,
+      "bounds": {
+        "min": [
+          -0.11024418473243713,
+          0.0,
+          -0.03463893383741379
+        ],
+        "max": [
+          0.17987027764320374,
+          0.02264551632106304,
+          0.034491702914237976
+        ],
+        "center": [
+          0.005786766011289122,
+          0.011496027785991776,
+          -6.364686561343443e-05
+        ]
+      },
+      "description": "A carved wooden spoon with a shallow oval bowl, tapered neck, and long rounded handle. The surface is smooth, varnished brown wood with visible natural grain.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The object appears to be a single-piece wooden kitchen spoon. With no product dimensions supplied, a realistic scale estimate is about 0.28-0.32 m long, a bowl roughly 0.075 m by 0.055 m, and a handle diameter/thickness around 0.012-0.018 m tapering toward the neck. A typical solid hardwood spoon of this size weighs about 35-60 g; 0.045 kg is a reasonable central estimate. The dominant contact material is sealed/polished wood. Hardwood densities commonly range from 550-800 kg/m^3; because the spoon is carved and thin, a material density of about 650 kg/m^3 gives a plausible solid volume of approximately 6.9e-5 m^3 for a 45 g object. Wood-on-common-table or wood-on-rubber contacts typically have moderate friction; polished/varnished wood is lower than raw rough wood, so static friction is estimated at 0.50 and dynamic friction at 0.38. Restitution is low-to-moderate because wood is rigid but internally damping and the spoon has thin curved geometry, so 0.35 is appropriate. For collision, a single convex hull would fill in the concave spoon bowl and over-approximate the long curved profile, while a triangle mesh is not recommended for a dynamic rigid body in PhysX. Convex decomposition is the best default: use separate hulls for the handle, neck, bowl underside, rim, and optionally inner bowl surface to approximate the shallow concavity. Contact offsets are kept small because this is a small tabletop object with thin edges; 0.003 m contact offset and 0.0005 m rest offset provide stable contact generation without a large visible gap. CCD is recommended because the spoon is long, light, and has thin edges that may tunnel when dropped or moved quickly. There are no articulations or joints because the spoon is a single rigid piece.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.38,
+      "restitution": 0.35,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00788 Spoon Wooden",
+  "object_description": "A carved wooden spoon with a shallow oval bowl, tapered neck, and long rounded handle. The surface is smooth, varnished brown wood with visible natural grain.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.045,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

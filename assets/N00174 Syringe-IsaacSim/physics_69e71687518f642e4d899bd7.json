@@ -1,0 +1,670 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_syringe_a02_barrel_01",
+      "part_name": "sm_syringe_a02_barrel_01",
+      "source_part_name": "sm_syringe_a02_barrel_01",
+      "source_object_name": "sm_syringe_a02_barrel_01",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "polycarbonate_glass",
+      "material": "trans__glass__white_a",
+      "mass": 0.003,
+      "density": 1200.0,
+      "inertia": [
+        1.80133932834969e-07,
+        1.8769094695507935e-06,
+        1.8915552208562377e-06
+      ],
+      "inertia_axes": [
+        7.72711169281827e-06,
+        0.7071067870561524,
+        -0.7071067752555956,
+        -5.200923985101437e-06
+      ],
+      "center_of_mass": [
+        2.0474260010282117e-10,
+        0.036109756042160296,
+        0.010052829797556753
+      ],
+      "part_origin_world": [
+        2.0474260010282117e-10,
+        0.036109756042160296,
+        0.010052829797556753
+      ],
+      "volume": 3.301696788030973e-06,
+      "bounds": {
+        "min": [
+          -0.014701,
+          0.0,
+          -0.084528
+        ],
+        "max": [
+          0.014701,
+          0.020107,
+          0.000789
+        ],
+        "center": [
+          0.0,
+          0.010053,
+          -0.04187
+        ]
+      },
+      "description": "Main transparent cylindrical body of the syringe.",
+      "reasoning": "Main structural body. Made of clear polycarbonate to allow visibility of contents.",
+      "static_friction": 0.3,
+      "dynamic_friction": 0.2,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Red",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_barrel_decal_01",
+      "part_name": "sm_syringe_a02_barrel_decal_01",
+      "source_part_name": "sm_syringe_a02_barrel_decal_01",
+      "source_object_name": "sm_syringe_a02_barrel_decal_01",
+      "part_index": 1,
+      "part_id": "part_01",
+      "material_name": "ink_decal",
+      "material": "ink_decal",
+      "mass": 0.0001,
+      "density": 1000.0,
+      "inertia": [
+        1.4971758901173894e-09,
+        2.5366836217902275e-08,
+        2.642259676439239e-08
+      ],
+      "inertia_axes": [
+        0.7060401934846371,
+        0.01974903348071372,
+        0.00014048757253493085,
+        -0.7078963208860433
+      ],
+      "center_of_mass": [
+        -4.596772517347089e-05,
+        0.03716981102036583,
+        0.014909689299710692
+      ],
+      "part_origin_world": [
+        -4.596772517347089e-05,
+        0.03716981102036583,
+        0.014909689299710692
+      ],
+      "volume": 3.4047058879873398e-06,
+      "bounds": {
+        "min": [
+          -0.007832,
+          0.011797,
+          -0.072054
+        ],
+        "max": [
+          0.007882,
+          0.018132,
+          -0.011396
+        ],
+        "center": [
+          2.5e-05,
+          0.014964,
+          -0.041725
+        ]
+      },
+      "description": "Printed ink markings for volume measurement on the barrel.",
+      "reasoning": "Zero-thickness decal layer. Must be fixed to the barrel.",
+      "static_friction": 0.3,
+      "dynamic_friction": 0.2,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 0.0,
+      "target_roughness": 0.8,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Blue",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_needle_cap_01",
+      "part_name": "sm_syringe_a02_needle_cap_01",
+      "source_part_name": "sm_syringe_a02_needle_cap_01",
+      "source_object_name": "sm_syringe_a02_needle_cap_01",
+      "part_index": 2,
+      "part_id": "part_07",
+      "material_name": "polypropylene_plastic",
+      "material": "trans__glass__lightgreen_a",
+      "mass": 0.001,
+      "density": 900.0,
+      "inertia": [
+        8.57687002376022e-09,
+        2.8439343600901555e-07,
+        2.843944671869549e-07
+      ],
+      "inertia_axes": [
+        0.7001886084995341,
+        0.09863989587383801,
+        -0.09864006582141427,
+        -0.7001972728340432
+      ],
+      "center_of_mass": [
+        2.413945775748357e-06,
+        0.1024350091330361,
+        0.010051568072488333
+      ],
+      "part_origin_world": [
+        2.413945775748357e-06,
+        0.1024350091330361,
+        0.010051568072488333
+      ],
+      "volume": 7.017838401322629e-07,
+      "bounds": {
+        "min": [
+          -0.004492,
+          0.00556,
+          -0.136503
+        ],
+        "max": [
+          0.004492,
+          0.014544,
+          -0.080995
+        ],
+        "center": [
+          0.0,
+          0.010052,
+          -0.108749
+        ]
+      },
+      "description": "Removable plastic cover protecting the needle.",
+      "reasoning": "Protective cover that can be physically separated from the syringe, making it a floating independent body.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Green",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_needle_part01_01",
+      "part_name": "sm_syringe_a02_needle_part01_01",
+      "source_part_name": "sm_syringe_a02_needle_part01_01",
+      "source_object_name": "sm_syringe_a02_needle_part01_01",
+      "part_index": 3,
+      "part_id": "part_06",
+      "material_name": "rigid_plastic",
+      "material": "trans__glass__lightgreen_a",
+      "mass": 0.0005,
+      "density": 1100.0,
+      "inertia": [
+        2.027140104638799e-09,
+        1.0437264364377934e-08,
+        1.0437659869969886e-08
+      ],
+      "inertia_axes": [
+        0.2852094016162162,
+        0.645495267955101,
+        -0.6481075947416906,
+        -0.28626561427358505
+      ],
+      "center_of_mass": [
+        2.349206351843036e-05,
+        0.08337935876279369,
+        0.01005322866056638
+      ],
+      "part_origin_world": [
+        2.349206351843036e-05,
+        0.08337935876279369,
+        0.01005322866056638
+      ],
+      "volume": 7.874628805137305e-08,
+      "bounds": {
+        "min": [
+          -0.002938,
+          0.007116,
+          -0.093021
+        ],
+        "max": [
+          0.002938,
+          0.012991,
+          -0.077019
+        ],
+        "center": [
+          0.0,
+          0.010053,
+          -0.08502
+        ]
+      },
+      "description": "Plastic base of the needle that attaches to the barrel.",
+      "reasoning": "Fixed hub connecting the metal needle to the plastic barrel.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Yellow",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_needle_part02_01",
+      "part_name": "sm_syringe_a02_needle_part02_01",
+      "source_part_name": "sm_syringe_a02_needle_part02_01",
+      "source_object_name": "sm_syringe_a02_needle_part02_01",
+      "part_index": 4,
+      "part_id": "part_05",
+      "material_name": "stainless_steel",
+      "material": "trans__glass__lightgreen_a",
+      "mass": 0.0002,
+      "density": 7900.0,
+      "inertia": [
+        1e-10,
+        2.3489931425991896e-10,
+        2.349029752393122e-10
+      ],
+      "inertia_axes": [
+        0.7070828127969269,
+        0.005766601943485316,
+        -0.0057680763966942985,
+        -0.7070837089368512
+      ],
+      "center_of_mass": [
+        5.744407266947404e-10,
+        0.09190040347479214,
+        0.01005426562431891
+      ],
+      "part_origin_world": [
+        5.744407266947404e-10,
+        0.09190040347479214,
+        0.01005426562431891
+      ],
+      "volume": 9.723659861735112e-09,
+      "bounds": {
+        "min": [
+          -0.001031,
+          0.009024,
+          -0.093807
+        ],
+        "max": [
+          0.001031,
+          0.011085,
+          -0.090115
+        ],
+        "center": [
+          0.0,
+          0.010055,
+          -0.091961
+        ]
+      },
+      "description": "The main metal tube of the needle.",
+      "reasoning": "Metal tubing glued or molded into the hub.",
+      "static_friction": 0.2,
+      "dynamic_friction": 0.15,
+      "restitution": 0.3,
+      "friction_combine_mode": "min",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Purple",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_needle_part03_01",
+      "part_name": "sm_syringe_a02_needle_part03_01",
+      "source_part_name": "sm_syringe_a02_needle_part03_01",
+      "source_object_name": "sm_syringe_a02_needle_part03_01",
+      "part_index": 5,
+      "part_id": "part_04",
+      "material_name": "stainless_steel",
+      "material": "stainless_steel",
+      "mass": 0.0001,
+      "density": 7900.0,
+      "inertia": [
+        1e-10,
+        1.2834611804987377e-08,
+        1.283462294499163e-08
+      ],
+      "inertia_axes": [
+        0.6364777425387036,
+        0.3080513756505878,
+        -0.3077869298078635,
+        -0.6366063454381096
+      ],
+      "center_of_mass": [
+        2.0468065442096412e-07,
+        0.10877667652161868,
+        0.010056961361883408
+      ],
+      "part_origin_world": [
+        2.0468065442096412e-07,
+        0.10877667652161868,
+        0.010056961361883408
+      ],
+      "volume": 1.0972259064955938e-08,
+      "bounds": {
+        "min": [
+          -0.0003,
+          0.009754,
+          -0.129808
+        ],
+        "max": [
+          0.0003,
+          0.010354,
+          -0.089169
+        ],
+        "center": [
+          0.0,
+          0.010054,
+          -0.109489
+        ]
+      },
+      "description": "The sharp beveled tip of the needle.",
+      "reasoning": "Terminal sharp end of the metal needle shaft.",
+      "static_friction": 0.2,
+      "dynamic_friction": 0.15,
+      "restitution": 0.3,
+      "friction_combine_mode": "min",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 1.0,
+      "target_roughness": 0.15,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Orange",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_plunger_body_01",
+      "part_name": "sm_syringe_a02_plunger_body_01",
+      "source_part_name": "sm_syringe_a02_plunger_body_01",
+      "source_object_name": "sm_syringe_a02_plunger_body_01",
+      "part_index": 6,
+      "part_id": "part_02",
+      "material_name": "polypropylene_plastic",
+      "material": "trans__glass__white_a",
+      "mass": 0.002,
+      "density": 900.0,
+      "inertia": [
+        3.496091320022511e-08,
+        1.4691181560170136e-06,
+        1.4691523023798924e-06
+      ],
+      "inertia_axes": [
+        0.7070151661779361,
+        -0.0106335364832276,
+        -0.010617296882715175,
+        0.7070387229163263
+      ],
+      "center_of_mass": [
+        5.219582847324069e-07,
+        0.024879092544854226,
+        0.010053028998034976
+      ],
+      "part_origin_world": [
+        5.219582847324069e-07,
+        0.024879092544854226,
+        0.010053028998034976
+      ],
+      "volume": 2.3693204379208847e-06,
+      "bounds": {
+        "min": [
+          -0.009708,
+          0.000346,
+          -0.06713
+        ],
+        "max": [
+          0.009708,
+          0.019763,
+          0.015638
+        ],
+        "center": [
+          0.0,
+          0.010054,
+          -0.025746
+        ]
+      },
+      "description": "Plastic rod that is pushed or pulled to move fluids.",
+      "reasoning": "Slides linearly inside the syringe barrel. Z-axis alignment is clear from the model's upright orientation.",
+      "static_friction": 0.3,
+      "dynamic_friction": 0.2,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Cyan",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_syringe_a02_plunger_gasket_01",
+      "part_name": "sm_syringe_a02_plunger_gasket_01",
+      "source_part_name": "sm_syringe_a02_plunger_gasket_01",
+      "source_object_name": "sm_syringe_a02_plunger_gasket_01",
+      "part_index": 7,
+      "part_id": "part_03",
+      "material_name": "silicone_rubber",
+      "material": "silicone_rubber",
+      "mass": 0.0007,
+      "density": 1200.0,
+      "inertia": [
+        9.898762040800123e-09,
+        9.899088080511595e-09,
+        1.603079137095446e-08
+      ],
+      "inertia_axes": [
+        0.44724154931290644,
+        0.44665429561470826,
+        0.547578699364436,
+        -0.548299648713614
+      ],
+      "center_of_mass": [
+        -5.545759677080613e-09,
+        0.06991119732199313,
+        0.010063879691578787
+      ],
+      "part_origin_world": [
+        -5.545759677080613e-09,
+        0.06991119732199313,
+        0.010063879691578787
+      ],
+      "volume": 8.134295210947457e-07,
+      "bounds": {
+        "min": [
+          -0.007338,
+          0.002724,
+          -0.073506
+        ],
+        "max": [
+          0.007338,
+          0.01741,
+          -0.067131
+        ],
+        "center": [
+          0.0,
+          0.010067,
+          -0.070319
+        ]
+      },
+      "description": "Rubber seal at the tip of the plunger.",
+      "reasoning": "Soft rubber seal permanently attached to the plunger body to maintain suction.",
+      "static_friction": 0.7,
+      "dynamic_friction": 0.5,
+      "restitution": 0.05,
+      "friction_combine_mode": "max",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 0.0,
+      "target_roughness": 0.7,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Pink",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [
+    {
+      "child": "sm_syringe_a02_barrel_decal_01",
+      "parent": "sm_syringe_a02_barrel_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_barrel_01__sm_syringe_a02_barrel_decal_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_needle_cap_01",
+      "parent": "sm_syringe_a02_barrel_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_barrel_01__sm_syringe_a02_needle_cap_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_needle_part01_01",
+      "parent": "sm_syringe_a02_needle_cap_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_needle_cap_01__sm_syringe_a02_needle_part01_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_needle_part02_01",
+      "parent": "sm_syringe_a02_needle_cap_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_needle_cap_01__sm_syringe_a02_needle_part02_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_needle_part03_01",
+      "parent": "sm_syringe_a02_needle_cap_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_needle_cap_01__sm_syringe_a02_needle_part03_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_plunger_body_01",
+      "parent": "sm_syringe_a02_barrel_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_barrel_01__sm_syringe_a02_plunger_body_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_syringe_a02_plunger_gasket_01",
+      "parent": "sm_syringe_a02_barrel_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_syringe_a02_barrel_01__sm_syringe_a02_plunger_gasket_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    }
+  ],
+  "base_link": "sm_syringe_a02_barrel_01",
+  "object_description": "A small medical syringe assembly with a sliding plunger and removable needle cap. Core assumption is that the plunger slides smoothly inside the barrel while the cap can be physically separated.",
+  "total_mass": 0.0075,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "Excellent kinematic layout representing a functional syringe with accurate slider constraints and a separable safety cap.",
+  "num_parts": 8,
+  "object_type": "rigid_bodies"
+}

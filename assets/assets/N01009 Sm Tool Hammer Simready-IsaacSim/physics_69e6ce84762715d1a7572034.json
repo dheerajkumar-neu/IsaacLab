@@ -1,0 +1,166 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_tool_hammer_a02_body_01",
+      "part_name": "sm_tool_hammer_a02_body_01",
+      "source_part_name": "sm_tool_hammer_a02_body_01",
+      "source_object_name": "sm_tool_hammer_a02_body_01",
+      "part_index": 0,
+      "part_id": "part_01",
+      "material_name": "wood",
+      "material": "wood",
+      "mass": 0.2,
+      "density": 700.0,
+      "inertia": [
+        1.4768437235600793e-05,
+        0.0014247379829895918,
+        0.0014291011523086792
+      ],
+      "inertia_axes": [
+        0.5000410188521541,
+        -0.5000656932202611,
+        -0.49993471855362065,
+        -0.4999585573966622
+      ],
+      "center_of_mass": [
+        0.001058612587497289,
+        -2.1425349603057924e-07,
+        -0.014907535248637362
+      ],
+      "part_origin_world": [
+        0.001058612587497289,
+        -2.1425349603057924e-07,
+        -0.014907535248637362
+      ],
+      "volume": 0.00012688465086801035,
+      "bounds": {
+        "min": [
+          -0.013445,
+          -0.152238,
+          -0.010637
+        ],
+        "max": [
+          0.015572,
+          0.151336,
+          0.010637
+        ],
+        "center": [
+          0.001064,
+          -0.000451,
+          0.0
+        ]
+      },
+      "description": "Wooden shaft that serves as the main grip for the hammer.",
+      "reasoning": "Visuals show a wooden handle with paint splatters. It serves as the primary base structure that the user grasps.",
+      "static_friction": 0.65,
+      "dynamic_friction": 0.55,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "target_metallic": 0.0,
+      "target_roughness": 0.65,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Red",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_tool_hammer_a02_hammer_01",
+      "part_name": "sm_tool_hammer_a02_hammer_01",
+      "source_part_name": "sm_tool_hammer_a02_hammer_01",
+      "source_object_name": "sm_tool_hammer_a02_hammer_01",
+      "part_index": 1,
+      "part_id": "part_00",
+      "material_name": "steel",
+      "material": "steel",
+      "mass": 0.45,
+      "density": 7850.0,
+      "inertia": [
+        5.7633240925623034e-05,
+        0.0003326369426641967,
+        0.0003524186744257812
+      ],
+      "inertia_axes": [
+        0.7051368255146726,
+        -0.7051376829872997,
+        -0.05273944008883169,
+        -0.05273951832837706
+      ],
+      "center_of_mass": [
+        0.003944117592483881,
+        4.079315021373914e-09,
+        0.13130792284079618
+      ],
+      "part_origin_world": [
+        0.003944117592483881,
+        4.079315021373914e-09,
+        0.13130792284079618
+      ],
+      "volume": 7.00725720446548e-05,
+      "bounds": {
+        "min": [
+          -0.052018,
+          0.112552,
+          -0.012863
+        ],
+        "max": [
+          0.05219,
+          0.152239,
+          0.012863
+        ],
+        "center": [
+          8.6e-05,
+          0.132395,
+          0.0
+        ]
+      },
+      "description": "Heavy metal claw hammer head used for striking and pulling nails.",
+      "reasoning": "The top striking head is made of heavy metal (likely steel). It is permanently fixed to the wooden handle.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.4,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 1.0,
+      "target_roughness": 0.35,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Blue",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [
+    {
+      "child": "sm_tool_hammer_a02_hammer_01",
+      "parent": "sm_tool_hammer_a02_body_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_tool_hammer_a02_body_01__sm_tool_hammer_a02_hammer_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    }
+  ],
+  "base_link": "sm_tool_hammer_a02_body_01",
+  "object_description": "A standard claw hammer with a wooden handle and a solid metal head. Simulated as a single rigid assembly.",
+  "total_mass": 0.65,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "The hammer is a simple rigid assembly. The realistic mass ratio between the heavy metal head and lighter wooden handle will ensure accurate center of mass and swinging dynamics.",
+  "num_parts": 2,
+  "object_type": "rigid_bodies"
+}

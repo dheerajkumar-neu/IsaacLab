@@ -1,0 +1,670 @@
+{
+  "parts": [
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_decalbrandname_01",
+      "part_name": "sm_bathroomfaucet_a01_decalbrandname_01",
+      "source_part_name": "sm_bathroomfaucet_a01_decalbrandname_01",
+      "source_object_name": "sm_bathroomfaucet_a01_decalbrandname_01",
+      "part_index": 0,
+      "part_id": "part_06",
+      "material_name": "chrome_metal",
+      "material": "chrome_metal",
+      "mass": 0.002,
+      "density": 7800.0,
+      "inertia": [
+        2.9072098553631036e-09,
+        5.6142720166995714e-08,
+        5.904993331845221e-08
+      ],
+      "inertia_axes": [
+        0.9912092474516243,
+        0.1322946968227193,
+        0.00020428046416587356,
+        -0.0015163206987374787
+      ],
+      "center_of_mass": [
+        -0.0005237156038865173,
+        -0.00023160237194829532,
+        0.2131394257412978
+      ],
+      "part_origin_world": [
+        -0.0005237156038865173,
+        -0.00023160237194829532,
+        0.2131394257412978
+      ],
+      "volume": 1.1653750784426847e-10,
+      "bounds": {
+        "min": [
+          -0.010452,
+          0.212531,
+          -0.001976
+        ],
+        "max": [
+          0.009488,
+          0.213739,
+          0.002468
+        ],
+        "center": [
+          -0.000482,
+          0.213135,
+          0.000246
+        ]
+      },
+      "description": "Tiny metallic decal displaying the brand name on the handle.",
+      "reasoning": "Very small cosmetic decal resting on the handle surface.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 1.0,
+      "target_roughness": 0.2,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Red",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_decalcoldwater_01",
+      "part_name": "sm_bathroomfaucet_a01_decalcoldwater_01",
+      "source_part_name": "sm_bathroomfaucet_a01_decalcoldwater_01",
+      "source_object_name": "sm_bathroomfaucet_a01_decalcoldwater_01",
+      "part_index": 1,
+      "part_id": "part_05",
+      "material_name": "painted_plastic",
+      "material": "opaque__metal__painted_blue",
+      "mass": 0.001,
+      "density": 1100.0,
+      "inertia": [
+        8.219452538361109e-10,
+        8.892739692117692e-10,
+        1.7112142333170254e-09
+      ],
+      "inertia_axes": [
+        0.9914421436466428,
+        0.1305468024251238,
+        1.181629049762378e-05,
+        -8.965657004403907e-05
+      ],
+      "center_of_mass": [
+        -0.011128660940691473,
+        0.008632840581068342,
+        0.2155599273552129
+      ],
+      "part_origin_world": [
+        -0.011128660940691473,
+        0.008632840581068342,
+        0.2155599273552129
+      ],
+      "volume": 8.36565071104324e-12,
+      "bounds": {
+        "min": [
+          -0.013097,
+          0.21502,
+          -0.010441
+        ],
+        "max": [
+          -0.00916,
+          0.216044,
+          -0.006618
+        ],
+        "center": [
+          -0.011128,
+          0.215532,
+          -0.00853
+        ]
+      },
+      "description": "Small blue painted dot indicating cold water direction.",
+      "reasoning": "Small cosmetic indicator fixed to the handle.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Blue",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_decalhotwater_01",
+      "part_name": "sm_bathroomfaucet_a01_decalhotwater_01",
+      "source_part_name": "sm_bathroomfaucet_a01_decalhotwater_01",
+      "source_object_name": "sm_bathroomfaucet_a01_decalhotwater_01",
+      "part_index": 2,
+      "part_id": "part_04",
+      "material_name": "painted_plastic",
+      "material": "opaque__metal__painted_red",
+      "mass": 0.001,
+      "density": 1100.0,
+      "inertia": [
+        7.84232114081405e-10,
+        9.537458305547966e-10,
+        1.737978530222901e-09
+      ],
+      "inertia_axes": [
+        0.9914493199343966,
+        0.1304923215536729,
+        -5.084799720167509e-07,
+        4.110596380934257e-06
+      ],
+      "center_of_mass": [
+        0.010917995667217807,
+        0.008527223985979875,
+        0.2155314741506324
+      ],
+      "part_origin_world": [
+        0.010917995667217807,
+        0.008527223985979875,
+        0.2155314741506324
+      ],
+      "volume": 7.336675631162213e-12,
+      "bounds": {
+        "min": [
+          0.00895,
+          0.21502,
+          -0.010441
+        ],
+        "max": [
+          0.012886,
+          0.216044,
+          -0.006618
+        ],
+        "center": [
+          0.010918,
+          0.215532,
+          -0.00853
+        ]
+      },
+      "description": "Small red painted dot indicating hot water direction.",
+      "reasoning": "Small cosmetic indicator fixed to the handle.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Green",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_faucet_01",
+      "part_name": "sm_bathroomfaucet_a01_faucet_01",
+      "source_part_name": "sm_bathroomfaucet_a01_faucet_01",
+      "source_object_name": "sm_bathroomfaucet_a01_faucet_01",
+      "part_index": 3,
+      "part_id": "part_00",
+      "material_name": "powder_coated_brass",
+      "material": "powder_coated_brass",
+      "mass": 1.55,
+      "density": 8500.0,
+      "inertia": [
+        0.001360370403347422,
+        0.006022496744011292,
+        0.0070812406998911216
+      ],
+      "inertia_axes": [
+        0.13447287646417513,
+        0.6942024496212704,
+        0.13447289965448742,
+        0.6942024515181379
+      ],
+      "center_of_mass": [
+        -4.2909216478493996e-10,
+        0.01815639016359194,
+        0.11566600052890393
+      ],
+      "part_origin_world": [
+        -4.2909216478493996e-10,
+        0.01815639016359194,
+        0.11566600052890393
+      ],
+      "volume": 0.00031058863680254243,
+      "bounds": {
+        "min": [
+          -0.022608,
+          0.0,
+          -0.137251
+        ],
+        "max": [
+          0.022608,
+          0.19689,
+          0.022469
+        ],
+        "center": [
+          0.0,
+          0.098445,
+          -0.057391
+        ]
+      },
+      "description": "Main rigid structural body and spout of the faucet.",
+      "reasoning": "This is the primary stationary body of the faucet that mounts to the sink. Matte dark finish implies powder-coated brass.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "target_metallic": 1.0,
+      "target_roughness": 0.5,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Yellow",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_faucethandle_01",
+      "part_name": "sm_bathroomfaucet_a01_faucethandle_01",
+      "source_part_name": "sm_bathroomfaucet_a01_faucethandle_01",
+      "source_object_name": "sm_bathroomfaucet_a01_faucethandle_01",
+      "part_index": 4,
+      "part_id": "part_07",
+      "material_name": "polished_chrome",
+      "material": "polished_chrome",
+      "mass": 0.4,
+      "density": 7800.0,
+      "inertia": [
+        7.119513451707323e-05,
+        0.00020315233407051632,
+        0.00022207417537512333
+      ],
+      "inertia_axes": [
+        0.6915458200969885,
+        0.14752755861762795,
+        -0.14752754831411763,
+        0.6915458196266766
+      ],
+      "center_of_mass": [
+        -1.0947331512077575e-10,
+        0.016122322823724198,
+        0.2038756611117263
+      ],
+      "part_origin_world": [
+        -1.0947331512077575e-10,
+        0.016122322823724198,
+        0.2038756611117263
+      ],
+      "volume": 7.289298404676823e-05,
+      "bounds": {
+        "min": [
+          -0.019,
+          0.181858,
+          -0.065512
+        ],
+        "max": [
+          0.019,
+          0.230806,
+          0.018927
+        ],
+        "center": [
+          0.0,
+          0.206332,
+          -0.023293
+        ]
+      },
+      "description": "Lever handle to control water flow and temperature.",
+      "reasoning": "This handle pivots to actuate the internal valve cartridge. Modeled as a revolute joint; omitted axis hint because it operates in two axes (up/down and left/right).",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.2,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 1.0,
+      "target_roughness": 0.1,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Purple",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_filter_01",
+      "part_name": "sm_bathroomfaucet_a01_filter_01",
+      "source_part_name": "sm_bathroomfaucet_a01_filter_01",
+      "source_object_name": "sm_bathroomfaucet_a01_filter_01",
+      "part_index": 5,
+      "part_id": "part_01",
+      "material_name": "hard_plastic",
+      "material": "hard_plastic",
+      "mass": 0.015,
+      "density": 1100.0,
+      "inertia": [
+        5.017069939765284e-07,
+        5.018772422860824e-07,
+        9.583021972671457e-07
+      ],
+      "inertia_axes": [
+        0.24200823096780572,
+        -0.9696486564102808,
+        -0.03377994811361093,
+        -0.00850966339007808
+      ],
+      "center_of_mass": [
+        -1.8793744713406802e-06,
+        0.11843430854273382,
+        0.16807322390021653
+      ],
+      "part_origin_world": [
+        -1.8793744713406802e-06,
+        0.11843430854273382,
+        0.16807322390021653
+      ],
+      "volume": 1.6446744672398117e-06,
+      "bounds": {
+        "min": [
+          -0.012975,
+          0.162354,
+          -0.129324
+        ],
+        "max": [
+          0.012975,
+          0.175758,
+          -0.106141
+        ],
+        "center": [
+          0.0,
+          0.169056,
+          -0.117732
+        ]
+      },
+      "description": "Internal plastic filter mesh inside the spout.",
+      "reasoning": "Small internal component located at the spout tip.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.3,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 0.0,
+      "target_roughness": 0.6,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Orange",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_holecup_01",
+      "part_name": "sm_bathroomfaucet_a01_holecup_01",
+      "source_part_name": "sm_bathroomfaucet_a01_holecup_01",
+      "source_object_name": "sm_bathroomfaucet_a01_holecup_01",
+      "part_index": 6,
+      "part_id": "part_02",
+      "material_name": "rubber",
+      "material": "rubber",
+      "mass": 0.025,
+      "density": 1200.0,
+      "inertia": [
+        1.0646939501834225e-06,
+        1.0812960532613022e-06,
+        2.100633840298484e-06
+      ],
+      "inertia_axes": [
+        0.9670484463450677,
+        0.25459241549308537,
+        1.6802877417787524e-05,
+        -6.412994759863667e-05
+      ],
+      "center_of_mass": [
+        -9.499204342870712e-09,
+        0.11714739544019538,
+        0.1708984811956815
+      ],
+      "part_origin_world": [
+        -9.499204342870712e-09,
+        0.11714739544019538,
+        0.1708984811956815
+      ],
+      "volume": 1.7463557417021577e-06,
+      "bounds": {
+        "min": [
+          -0.012991,
+          0.163306,
+          -0.1291
+        ],
+        "max": [
+          0.012991,
+          0.178643,
+          -0.104942
+        ],
+        "center": [
+          0.0,
+          0.170975,
+          -0.117021
+        ]
+      },
+      "description": "Housing ring holding the aerator in place at the spout.",
+      "reasoning": "Rubberized or plastic ring framing the aerator hole.",
+      "static_friction": 0.8,
+      "dynamic_friction": 0.7,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": 0.0,
+      "target_roughness": 0.8,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Cyan",
+      "confidence": "high"
+    },
+    {
+      "canonical_name": "sm_bathroomfaucet_a01_mount_01",
+      "part_name": "sm_bathroomfaucet_a01_mount_01",
+      "source_part_name": "sm_bathroomfaucet_a01_mount_01",
+      "source_object_name": "sm_bathroomfaucet_a01_mount_01",
+      "part_index": 7,
+      "part_id": "part_03",
+      "material_name": "rubber",
+      "material": "opaque__plastic__dark_grey",
+      "mass": 0.006,
+      "density": 1200.0,
+      "inertia": [
+        1.0964288906449285e-08,
+        1.0965607287279141e-08,
+        2.127770797150388e-08
+      ],
+      "inertia_axes": [
+        0.7071053197814383,
+        0.7071082242365728,
+        -0.00011285421752138537,
+        0.0001149683277616205
+      ],
+      "center_of_mass": [
+        4.257992012960442e-06,
+        0.01899077890681957,
+        0.19241353125427915
+      ],
+      "part_origin_world": [
+        4.257992012960442e-06,
+        0.01899077890681957,
+        0.19241353125427915
+      ],
+      "volume": 1.7691301196768526e-08,
+      "bounds": {
+        "min": [
+          -0.003031,
+          0.189379,
+          -0.019579
+        ],
+        "max": [
+          0.003039,
+          0.195449,
+          -0.018634
+        ],
+        "center": [
+          4e-06,
+          0.192414,
+          -0.019106
+        ]
+      },
+      "description": "Small cap covering the handle's set screw.",
+      "reasoning": "Small dot visible on the back of the handle, functioning as a plug or cap over the set screw.",
+      "static_friction": 0.8,
+      "dynamic_friction": 0.7,
+      "restitution": 0.1,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": false,
+      "target_metallic": null,
+      "target_roughness": null,
+      "glass_ior": null,
+      "glass_frosting": null,
+      "glass_thin_walled": null,
+      "glass_color": null,
+      "color_name": "Pink",
+      "confidence": "high"
+    }
+  ],
+  "joint_relations": [
+    {
+      "child": "sm_bathroomfaucet_a01_decalbrandname_01",
+      "parent": "sm_bathroomfaucet_a01_faucethandle_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucethandle_01__sm_bathroomfaucet_a01_decalbrandname_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_decalcoldwater_01",
+      "parent": "sm_bathroomfaucet_a01_faucethandle_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucethandle_01__sm_bathroomfaucet_a01_decalcoldwater_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_decalhotwater_01",
+      "parent": "sm_bathroomfaucet_a01_faucethandle_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucethandle_01__sm_bathroomfaucet_a01_decalhotwater_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_faucethandle_01",
+      "parent": "sm_bathroomfaucet_a01_faucet_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucet_01__sm_bathroomfaucet_a01_faucethandle_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_filter_01",
+      "parent": "sm_bathroomfaucet_a01_faucet_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucet_01__sm_bathroomfaucet_a01_filter_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_holecup_01",
+      "parent": "sm_bathroomfaucet_a01_faucet_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucet_01__sm_bathroomfaucet_a01_holecup_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    },
+    {
+      "child": "sm_bathroomfaucet_a01_mount_01",
+      "parent": "sm_bathroomfaucet_a01_faucet_01",
+      "joint_type": "fixed",
+      "name": "joint_sm_bathroomfaucet_a01_faucet_01__sm_bathroomfaucet_a01_mount_01",
+      "damping": 0.0,
+      "effort": 0.0,
+      "friction": 0.0,
+      "stiffness": 0.0,
+      "velocity": 0.0,
+      "origin": [],
+      "joint_rotation_local": [],
+      "axis": [],
+      "motion_limits": null,
+      "revolute_mode": null
+    }
+  ],
+  "base_link": "sm_bathroomfaucet_a01_faucet_01",
+  "object_description": "A modern bathroom faucet featuring a matte dark body and a polished chrome lever handle. The handle articulates to control water flow and temperature.",
+  "total_mass": 2.0,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "Excellent rigid body articulation setup with clearly defined root and movable components. The mass distribution correctly reflects a heavy brass base and a lighter handle.",
+  "num_parts": 8,
+  "object_type": "rigid_bodies"
+}

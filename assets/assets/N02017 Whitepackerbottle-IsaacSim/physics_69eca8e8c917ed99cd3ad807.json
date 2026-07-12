@@ -1,0 +1,82 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "product image",
+      "source_part_name": "product image",
+      "source_object_name": "product image",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "plastic",
+      "material": "plastic",
+      "mass": 0.05,
+      "density": 1000.0,
+      "inertia": [
+        6.19376993823633e-05,
+        0.00012934979657188092,
+        0.00012935578661504531
+      ],
+      "inertia_axes": [
+        0.5691774075542062,
+        0.41920340547094853,
+        -0.5692645173458014,
+        0.4198136406341323
+      ],
+      "center_of_mass": [
+        -0.0018762683027797138,
+        -3.5402411357044644e-06,
+        0.058999942142435174
+      ],
+      "part_origin_world": [
+        -0.0018762683027797138,
+        -3.5402411357044644e-06,
+        0.058999942142435174
+      ],
+      "volume": 6.300492627797896e-05,
+      "bounds": {
+        "min": [
+          -0.041172,
+          0.0,
+          -0.039308
+        ],
+        "max": [
+          0.037444,
+          0.142891,
+          0.039308
+        ],
+        "center": [
+          -0.0018635932755777017,
+          0.07157248051322225,
+          6.265539064142456e-07
+        ]
+      },
+      "description": "A white, cylindrical plastic bottle with a matching screw-on cap.",
+      "reasoning": "The asset is a standard plastic packer bottle, likely made of HDPE or PET. Assuming it is empty, the mass is estimated at 0.05 kg. The material density for solid plastic is around 1000 kg/m^3. Plastic surfaces exhibit moderate friction (static 0.4, dynamic 0.3) and low bounciness (restitution 0.3). Given the simple cylindrical geometry and the 'low' collision quality hint, a single convex hull is the most efficient and robust collider type for PhysX simulation. Continuous Collision Detection (CCD) is recommended if the lightweight bottle is subjected to high-velocity impacts or drops to prevent tunneling.",
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3,
+      "restitution": 0.3,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": "",
+      "confidence": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "product image",
+  "object_description": "A white, cylindrical plastic bottle with a matching screw-on cap.",
+  "total_mass": 0.05,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies",
+  "_file_info": {
+    "original_filename": "product_image.png",
+    "file_path": "/opt/palatial/palatial_home/transient/69eca8e8c917ed99cd3ad807/context/product_image.png",
+    "file_size_bytes": 25277,
+    "file_type": "image",
+    "processed_at": "2026-04-25 11:49:56"
+  }
+}

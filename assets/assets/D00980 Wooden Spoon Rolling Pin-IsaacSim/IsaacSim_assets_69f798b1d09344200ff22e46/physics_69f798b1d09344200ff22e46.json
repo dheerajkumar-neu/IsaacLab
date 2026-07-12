@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00980 Wooden Spoon Rolling Pin",
+      "source_part_name": "D00980 Wooden Spoon Rolling Pin",
+      "source_object_name": "D00980 Wooden Spoon Rolling Pin",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "baked_bread",
+      "material": "baked_bread",
+      "non_visual_material": null,
+      "mass": 0.72,
+      "density": 650.0,
+      "inertia": [
+        0.00039235533356823287,
+        0.01102132276233402,
+        0.011034731091565369
+      ],
+      "inertia_axes": [
+        0.49781265871896,
+        0.5021696622516899,
+        0.5020622320897368,
+        0.49793744812200597
+      ],
+      "center_of_mass": [
+        1.9512725413310078e-05,
+        -0.0006979056438346613,
+        0.03543875759948057
+      ],
+      "part_origin_world": [
+        1.9512725413310078e-05,
+        -0.0006979056438346613,
+        0.03543875759948057
+      ],
+      "volume": 0.001549236162694206,
+      "bounds": {
+        "min": [
+          -0.034107133746147156,
+          0.0,
+          -0.2689588665962219
+        ],
+        "max": [
+          0.034093890339136124,
+          0.07070547342300415,
+          0.26070842146873474
+        ],
+        "center": [
+          3.410132983153566e-07,
+          0.03546872071088411,
+          0.001320246497155269
+        ]
+      },
+      "description": "A light-colored wooden rolling pin with a cylindrical barrel, rounded ends, visible wood grain, and tapered handles on both sides.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The object appears to be a solid hardwood rolling pin, likely beech or maple, with a varnished or smoothly sanded surface and light flour/dust marks. No real product dimensions were provided, so the estimates assume a typical household rolling pin: total length about 0.45-0.50 m, barrel length about 0.25-0.30 m, barrel diameter about 0.065-0.075 m, and handle diameter about 0.025-0.035 m. Approximating the geometry as one large central cylinder plus two smaller rounded/tapered handle volumes gives a total volume near 0.0011 m^3. Hardwood density is typically 600-750 kg/m^3; using about 650 kg/m^3 gives an estimated mass of roughly 0.70-0.75 kg, so 0.72 kg is a realistic rigid-body mass. The center of mass should be close to the geometric center along the long axis if both handles are symmetric. For inertia, if the long axis is the local X axis, a reasonable diagonal estimate is approximately Ixx = 4e-4 to 6e-4 kg*m^2 and Iyy/Izz = 6e-3 to 9e-3 kg*m^2; Isaac/PhysX can recompute this from the collision approximation and assigned mass. The material is smooth hardwood, so static friction is estimated around 0.50 and dynamic friction around 0.40 against common hard surfaces; flour or dust on the surface may reduce both coefficients by 10-25%. Restitution is moderate-low for wood because impacts are not highly elastic and the elongated shape converts impacts into rotation, so 0.35 is appropriate. For collision geometry, a single convex hull would overfill the necked handle transitions, while an SDF or triangle mesh is more expensive than needed for this mostly axisymmetric object. A convex decomposition using separate convex/capsule-like hulls for the barrel and each handle is recommended; use enough radial segments to avoid faceted rolling artifacts. Rest offset should remain at 0.0 m for close visual alignment, with contact offset around 0.004-0.005 m for stable PhysX contact generation at meter scale. CCD is recommended if the rolling pin may be dropped, thrown, or moved quickly because the handles are relatively small-diameter features; it can be disabled for slow tabletop-only scenes. Suggested practical velocity limits are about 5 m/s linear and 50-80 rad/s angular for stable 60-120 Hz simulation. For hibernation/sleep, use the Isaac/PhysX default sleep threshold or a low mass-normalized threshold around 0.005, with small linear/angular damping only if persistent rolling jitter occurs. Compliant contacts are not needed for a rigid wooden object; if used to soften hard contacts, use very high stiffness with modest damping so the rolling pin does not appear rubbery.",
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4,
+      "restitution": 0.35,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00980 Wooden Spoon Rolling Pin",
+  "object_description": "A light-colored wooden rolling pin with a cylindrical barrel, rounded ends, visible wood grain, and tapered handles on both sides.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.72,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}
