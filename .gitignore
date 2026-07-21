@@ -6,6 +6,7 @@ __pycache__/
 datasets/
 logs/
 outputs/
+output/
 graphify-out/
 *.hdf5
 

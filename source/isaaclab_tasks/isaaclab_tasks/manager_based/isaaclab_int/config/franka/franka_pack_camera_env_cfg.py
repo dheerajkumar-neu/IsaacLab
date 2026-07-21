@@ -200,6 +200,45 @@ class ObservationsCfg:
                 "normalize": False,
             },
         )
+        #table side camera 3 (top-down overview of the entire env)
+        table_side_cam_3_rgb = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("table_side_cam_3"), "data_type": "rgb", "normalize": False},
+        )
+        table_side_cam_3_depth = ObsTerm(
+            func=mdp.image,
+            params={
+                "sensor_cfg": SceneEntityCfg("table_side_cam_3"),
+                "data_type": "distance_to_image_plane",
+                "normalize": False,
+            },
+        )
+        #table side camera 4 (top-down overview of the entire env)
+        table_side_cam_4_rgb = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("table_side_cam_4"), "data_type": "rgb", "normalize": False},
+        )
+        table_side_cam_4_depth = ObsTerm(
+            func=mdp.image,
+            params={
+                "sensor_cfg": SceneEntityCfg("table_side_cam_4"),
+                "data_type": "distance_to_image_plane",
+                "normalize": False,
+            },
+        )
+        # Environment top camera
+        env_top_cam_rgb = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("env_top_cam"), "data_type": "rgb", "normalize": False},
+        )
+        env_top_cam_depth = ObsTerm(
+            func=mdp.image,
+            params={
+                "sensor_cfg": SceneEntityCfg("env_top_cam"),
+                "data_type": "distance_to_image_plane",
+                "normalize": False,
+            },
+        )
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -271,7 +310,7 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
     observations: ObservationsCfg = ObservationsCfg()
 
     # Scene camera names exposed to dataset-recording scripts
-    image_obs_list = ["wrist_cam", "table_top_cam", "front_cam", "table_side_cam_1", "table_side_cam_2"]
+    image_obs_list = ["wrist_cam", "table_top_cam", "front_cam", "table_side_cam_1", "table_side_cam_2", "table_side_cam_3", "table_side_cam_4", "env_top_cam"]
 
     def __post_init__(self):
         super().__post_init__()
@@ -397,6 +436,8 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
         #   (0.05, 0.50), (0.15, 0.40), (0.20, 0.70)  ->  ~(0.13, 0.53) at z~0.13
         obj_cluster_center = (0.13, 0.53, 0.13)
 
+        #Cameras 6 & 7 — Table side cameras (per env, fixed lateral views)
+
         table_side_cam_1_eye = (0.90, 0.60, 0.50)  # right (+x) side, angled down at the objects
         self.scene.table_side_cam_1 = CameraCfg(
             prim_path="{ENV_REGEX_NS}/table_side_cam_1",
@@ -435,6 +476,78 @@ class FrankaPackCameraEnvCfg(franka_pack_joint_pos_env_cfg.FrankaPackEnvCfg):
             offset=CameraCfg.OffsetCfg(
                 pos=table_side_cam_2_eye,
                 rot=_look_at_quat_ros(table_side_cam_2_eye, obj_cluster_center),
+                convention="ros",
+            ),
+        )
+        # Camera 9 — Table side camera 3 (per env, fixed lateral view)
+        table_side_cam_3_eye = (0.12, 1.30, 0.50)  # front (+y) side, angled down at the objects
+        self.scene.table_side_cam_3 = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/table_side_cam_3",
+            update_period=0.0,
+            height=480,
+            width=640,
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=24.0,
+                focus_distance=400.0,
+                horizontal_aperture=33.0,  # RealSense D435 RGB HFOV ≈ 69°
+                clipping_range=(0.05, 3.0),
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=table_side_cam_3_eye,
+                rot=_look_at_quat_ros(table_side_cam_3_eye, obj_cluster_center),
+                convention="ros",
+            ),
+        )
+        # Camera 9 — Table side camera 4 (per env, fixed lateral view)
+        table_side_cam_4_eye = (0.12, 0.1, 0.50)  # back (-y) side, angled down at the objects
+        self.scene.table_side_cam_4 = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/table_side_cam_4",
+            update_period=0.0,
+            height=480,
+            width=640,
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=24.0,
+                focus_distance=400.0,
+                horizontal_aperture=33.0,  # RealSense D435 RGB HFOV ≈ 69°
+                clipping_range=(0.05, 3.0),
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=table_side_cam_4_eye,
+                rot=_look_at_quat_ros(table_side_cam_4_eye, obj_cluster_center),
+                convention="ros",
+            ),
+        )
+        # ------------------------------------------------------------------ #
+        # Camera 8 — Env top camera (per env, straight-down overview)
+        #
+        # Positioned at (0, 0, 2.4), directly above the env origin (robot
+        # base). Rotation (0, 0, 1, 0) = 180° around world Y → camera z-axis
+        # points world -Z (straight down), same convention as table_top_cam.
+        # This orientation is independent of camera height/position, so it
+        # gives a pure top-down view of whatever lies beneath the camera —
+        # robot, packing bin, and objects — covering the whole env.
+        # ------------------------------------------------------------------ #
+        env_top_cam_eye = (0.0, 0.0, 2.4)  # directly above the table
+        self.scene.env_top_cam = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/env_top_cam",
+            update_period=0.0,
+            height=480,
+            width=640,
+            data_types=["rgb", "distance_to_image_plane", "semantic_segmentation"],
+            colorize_semantic_segmentation=False,  # raw int IDs + idToLabels, for point-cloud masking
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=24.0,
+                focus_distance=400.0,
+                horizontal_aperture=33.0,  # RealSense D435 RGB HFOV ≈ 69°
+                clipping_range=(0.05, 3.0),
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=env_top_cam_eye,
+                rot=(0.0, 0.0, 1.0, 0.0),  # 180° around Y → camera_z = world -Z (looking down)
                 convention="ros",
             ),
         )

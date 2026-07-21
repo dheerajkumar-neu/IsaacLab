@@ -19,6 +19,11 @@ Episode format (per timestep arrays, shape (T, …)):
   grasp_confidence   (T,)     — active grasp confidence (0.0 when no grasp executing)
   grasp_object_idx   (T,)     — 0 = no grasp, 1/2/3 = object index being grasped
 
+  <frame_key>        (T, H, W, 3) uint8 — optional per-step RGB frame from one scene
+                      camera (e.g. "front_cam_rgb"), only present when the recorder
+                      is constructed with a frame_key (--record_type actions_frames
+                      in collect_packing_demos.py).
+
 Scalar per episode:
   success            bool
   num_objects_packed int
@@ -45,9 +50,12 @@ class HDF5EpisodeRecorder:
                                  grasp_confidence, grasp_object_idx)
         recorder.close_episode(success=True, num_objects_packed=3)
         recorder.close()
+
+    Pass ``frame_key`` (e.g. ``"front_cam_rgb"``) to also buffer one RGB frame per
+    step under that key — every ``record_step`` call must then include ``frame``.
     """
 
-    def __init__(self, output_path: str | Path) -> None:
+    def __init__(self, output_path: str | Path, frame_key: str | None = None) -> None:
         self._path = Path(output_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._file = h5py.File(self._path, "a")
@@ -55,6 +63,7 @@ class HDF5EpisodeRecorder:
             self._file.create_group("episodes")
 
         self._episode_idx: int = len(self._file["episodes"])
+        self._frame_key = frame_key
         self._buf: dict[str, list[np.ndarray]] = {}
         self._recording = False
 
@@ -79,6 +88,8 @@ class HDF5EpisodeRecorder:
             "grasp_confidence": [],
             "grasp_object_idx": [],
         }
+        if self._frame_key is not None:
+            self._buf[self._frame_key] = []
         self._recording = True
 
     def record_step(
@@ -90,6 +101,7 @@ class HDF5EpisodeRecorder:
         bin_pose: tuple[torch.Tensor, torch.Tensor],
         grasp_confidence: float = 0.0,
         grasp_object_idx: int = 0,
+        frame: np.ndarray | torch.Tensor | None = None,
     ) -> None:
         """Append one timestep to the episode buffer.
 
@@ -102,9 +114,20 @@ class HDF5EpisodeRecorder:
             bin_pose:         (pos (3,), quat (4,)) for packing_bin.
             grasp_confidence: Confidence score of the active grasp (0.0 if none).
             grasp_object_idx: 1/2/3 for the object being grasped; 0 otherwise.
+            frame:            (H, W, 3) RGB frame for this step. Required if the
+                              recorder was constructed with a frame_key.
         """
         if not self._recording:
             raise RuntimeError("call start_episode() before record_step()")
+
+        if self._frame_key is not None:
+            if frame is None:
+                raise ValueError(
+                    f"recorder was constructed with frame_key={self._frame_key!r}; "
+                    "record_step() requires a frame on every call."
+                )
+            frame_np = frame.detach().cpu().numpy() if isinstance(frame, torch.Tensor) else frame
+            self._buf[self._frame_key].append(frame_np.astype(np.uint8))
 
         def _np(t: torch.Tensor) -> np.ndarray:
             return t.detach().cpu().float().numpy()

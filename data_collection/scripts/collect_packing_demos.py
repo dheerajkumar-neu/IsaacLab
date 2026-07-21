@@ -9,11 +9,14 @@ Pipeline per episode
 --------------------
 For each object, strictly one at a time (object_01 → object_02 → object_03):
   1. Refresh cameras, then query GraspGenX ZMQ server for grasp candidates.
-  2. Filter grasps by confidence and select the best one.
-  3. Plan pick motion with CuRobo (approach to grasp pose, fingers open).
-  4. Execute waypoints (one per env step — plans are interpolated at env.step_dt,
-     so planned timing is reproduced), settle, close gripper. No grasp
-     verification — the flow proceeds straight to placing.
+  2. Filter and rank grasps by confidence/downwardness/centroid-closeness
+     (see filter_grasps).
+  3. Plan pick motion with CuRobo (approach to grasp pose, fingers open),
+     execute, settle, close gripper, then VERIFY the grasp by checking the
+     finger-joint positions (see MIN_GRASP_FINGER_POS): fingers stalled near
+     the closed limit mean they closed on air. On a planning failure or a
+     failed grasp check, fall through to the next-ranked candidate (up to
+     MAX_PICK_ATTEMPTS) instead of silently proceeding to place nothing.
   5. Plan place motion with CuRobo (carry to above bin, fingers closed).
   6. Execute waypoints, open gripper, record data.
   7. Plan a joint-space motion back to the home configuration and execute it,
@@ -51,6 +54,14 @@ Arguments
                      init_state poses every reset. In BOTH modes objects spawn
                      upright/standing (easiest geometry for GraspGenX).
   --debug            Deprecated alias for --object_placement fixed.
+  --record_type      'actions' (default): record only the current joint/EE/object
+                     states, same as before. 'actions_frames': also record a
+                     per-step RGB frame from --record_camera, so hdf5_to_mp4-style
+                     tooling can turn an episode into a video.
+  --record_camera    Scene camera to capture when --record_type actions_frames is
+                     set (default: front_cam). One of: wrist_cam, table_top_cam,
+                     front_cam, table_side_cam_1, table_side_cam_2, table_side_cam_3,
+                     table_side_cam_4, env_top_cam.
 """
 
 from __future__ import annotations
@@ -191,13 +202,15 @@ parser.add_argument("--grasp_port", type=int, default=5556,
 parser.add_argument("--grasp_topk", type=int, default=10,
                     help="Top-K grasps to request from GraspGenX server")
 parser.add_argument("--cameras", type=str,
-                    default="table_top_cam,table_side_cam_1,table_side_cam_2",
+                    default="table_top_cam,table_side_cam_1,table_side_cam_2,"
+                    "table_side_cam_3,table_side_cam_4",
                     help="Comma-separated scene cameras whose depth clouds are fused "
-                         "into one 3D point cloud for GraspGenX. Default is the three "
-                         "table-focused cameras (top + both lateral views), which give "
+                         "into one 3D point cloud for GraspGenX. Default is the top "
+                         "camera plus all four table-side cameras, which give "
                          "GraspGenX complete object geometry instead of just the top "
                          "surface. Available: wrist_cam, table_top_cam, front_cam, "
-                         "table_side_cam_1, table_side_cam_2.")
+                         "table_side_cam_1, table_side_cam_2, table_side_cam_3, "
+                         "table_side_cam_4.")
 parser.add_argument("--filter_radius", type=float, default=0.15,
                     help="Radius (m) around each object centre used to segment "
                          "the depth point cloud before sending to GraspGenX. "
@@ -219,6 +232,16 @@ parser.add_argument("--object_placement", type=str, default="random",
                          "in the env cfg, identical every episode.")
 parser.add_argument("--debug", action="store_true",
                     help="Deprecated alias for --object_placement fixed.")
+parser.add_argument("--record_type", type=str, default="actions",
+                    choices=["actions", "actions_frames"],
+                    help="'actions' (default): record only the current joint/EE/object "
+                         "states, unchanged from before. 'actions_frames': also record a "
+                         "per-step RGB frame from --record_camera into the HDF5 output, so "
+                         "episodes_to_mp4.py can render a video of the episode.")
+parser.add_argument("--record_camera", type=str, default="front_cam",
+                    help="Scene camera to capture when --record_type actions_frames is set. "
+                         "Available: wrist_cam, table_top_cam, front_cam, table_side_cam_1, "
+                         "table_side_cam_2, table_side_cam_3, table_side_cam_4, env_top_cam.")
 args = parser.parse_args()
 if args.debug:
     args.object_placement = "fixed"
@@ -246,6 +269,7 @@ _reassert_logging()
 # Normal imports (IsaacSim is now running)
 # --------------------------------------------------------------------------
 import gymnasium as gym  # noqa: E402
+import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from isaaclab.assets import Articulation  # noqa: E402
@@ -401,7 +425,7 @@ def _snapshot(
     ee_frame: FrameTransformer,
     env: ManagerBasedEnv,
     env_id: int = 0,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict, tuple]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict, tuple, np.ndarray | None]:
     """
     Read current sim state for one timestep.
 
@@ -411,6 +435,8 @@ def _snapshot(
         ee_quat    (4,)
         obj_poses  dict: object_name -> (pos (3,), quat (4,))
         bin_pose   (pos (3,), quat (4,))
+        frame      (H, W, 3) uint8 RGB from args.record_camera, or None unless
+                   args.record_type == "actions_frames"
     """
     joint_pos = robot.data.joint_pos[env_id].detach().cpu()
 
@@ -428,7 +454,14 @@ def _snapshot(
     bin_pos = (bin_obj.data.root_pos_w[env_id] - env.scene.env_origins[env_id]).detach().cpu()
     bin_quat = bin_obj.data.root_quat_w[env_id].detach().cpu()
 
-    return joint_pos, ee_pos, ee_quat, obj_poses, (bin_pos, bin_quat)
+    frame = None
+    if args.record_type == "actions_frames":
+        camera = env.scene[args.record_camera]
+        rgb = camera.data.output.get("rgb")
+        if rgb is not None:
+            frame = rgb[env_id].detach().cpu().numpy().astype(np.uint8)
+
+    return joint_pos, ee_pos, ee_quat, obj_poses, (bin_pos, bin_quat), frame
 
 
 # --------------------------------------------------------------------------
@@ -547,7 +580,7 @@ def _execute_waypoints(
     diverged = False
 
     def _record() -> None:
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose = _snapshot(robot, ee_frame, env)
+        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
         recorder.record_step(
             joint_pos=joint_pos,
             ee_pos=ee_pos,
@@ -556,6 +589,7 @@ def _execute_waypoints(
             bin_pose=bin_pose,
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
+            frame=frame,
         )
 
     for i, wp in enumerate(waypoints):
@@ -667,7 +701,7 @@ def _hold_gripper(
         )
         env_reset = _step_env(env, action)
 
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose = _snapshot(robot, ee_frame, env)
+        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
         recorder.record_step(
             joint_pos=joint_pos,
             ee_pos=ee_pos,
@@ -676,6 +710,7 @@ def _hold_gripper(
             bin_pose=bin_pose,
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
+            frame=frame,
         )
 
         if finger_joint_ids is not None:
@@ -690,6 +725,22 @@ def _hold_gripper(
         fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
         logging.info("    [%s] final finger positions: %s", label, _fmt(fingers))
     return True
+
+
+# Finger-joint position (m) below which BOTH fingers closing counts as "closed on
+# air" rather than a real grasp. An air-close drives the fingers to the joint's
+# hard closed limit (~0.0001 m); even the thinnest real grasp (a bowl rim or
+# bottle cap) stalls the fingers at 2-6 mm (verified 2026-07-10: real grasps at
+# 0.0048/0.0053 m vs. air-closes near 0.0001 m). This sits an order of magnitude
+# below that gap so it only flags unambiguous air-closes, never a thin-rim grasp.
+MIN_GRASP_FINGER_POS = 0.001
+
+
+def _grasp_gripped_object(robot: Articulation, finger_joint_ids: list[int]) -> bool:
+    """True if both fingers stopped above MIN_GRASP_FINGER_POS after closing —
+    i.e. something is between them, not air."""
+    fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
+    return bool((fingers > MIN_GRASP_FINGER_POS).all().item())
 
 
 # --------------------------------------------------------------------------
@@ -893,9 +944,9 @@ def main() -> None:
     _read_arm_action_transform(env, arm_joint_ids)
 
     # ---- GraspGenX depth client (primary) ----
-    # Fuses the depth clouds of all requested cameras (default: top + two lateral
-    # table cameras) into one world-frame cloud per grasp query, so GraspGenX sees
-    # full 3D object geometry rather than a single viewpoint.
+    # Fuses the depth clouds of all requested cameras (default: top + all four
+    # table-side cameras) into one world-frame cloud per grasp query, so GraspGenX
+    # sees full 3D object geometry rather than a single viewpoint.
     camera_names = [c.strip() for c in args.cameras.split(",") if c.strip()]
     missing_cams = [c for c in camera_names if c not in env.scene.keys()]
     if missing_cams:
@@ -935,8 +986,18 @@ def main() -> None:
     logging.getLogger("CuroboPlanner_0").setLevel(logging.DEBUG)
 
     # ---- data recorder ----
+    frame_key: str | None = None
+    if args.record_type == "actions_frames":
+        if args.record_camera not in env.scene.keys():
+            raise ValueError(
+                f"--record_camera {args.record_camera!r} is not a scene camera. "
+                f"Check the env cfg (Isaac-Pack-Object-Franka-Camera-v0) camera names."
+            )
+        frame_key = f"{args.record_camera}_rgb"
+        logging.info("Recording per-step RGB frames from %s (key=%s)", args.record_camera, frame_key)
+
     output_path = Path(args.output)
-    recorder = HDF5EpisodeRecorder(output_path)
+    recorder = HDF5EpisodeRecorder(output_path, frame_key=frame_key)
 
     for ep in range(args.num_episodes):
         logging.info("=== Episode %d/%d ===", ep + 1, args.num_episodes)
@@ -999,12 +1060,14 @@ def main() -> None:
                 logging.warning("    No grasp above threshold for %s (got %d raw), skipping.", obj_name, len(raw_grasps))
                 continue
 
-            # -- 2. Plan pick — try ranked candidates in turn until one plans --
-            # The top-ranked candidate is usually reachable, but not always (see
-            # MAX_PICK_ATTEMPTS above), so fall through to the next-best grasp on
-            # a planning failure instead of skipping the object outright.
+            # -- 2/3/4. Plan pick, execute, close, and VERIFY — try ranked candidates
+            # in turn until one both plans AND actually grips the object. Either a
+            # planning failure or a failed grasp check (fingers closed on air) falls
+            # through to the next-best candidate instead of skipping the object
+            # outright or — worse — silently proceeding to place nothing (see
+            # MIN_GRASP_FINGER_POS).
             best_grasp = None
-            pick_ok = False
+            grasp_confirmed = False
             for attempt_idx, candidate in enumerate(candidate_grasps, start=1):
                 logging.info(
                     "    Grasp attempt %d/%d: conf %.3f | TCP dist to object %.3f m | downwardness %.2f |"
@@ -1032,67 +1095,94 @@ def main() -> None:
                     obj_name, hand_z, tcp_z, obj_z, hand_z - obj_z, tcp_z - obj_z,
                 )
 
-                if planner.plan_pick(candidate):
-                    best_grasp = candidate
-                    pick_ok = True
+                if not planner.plan_pick(candidate):
+                    logging.warning(
+                        "    CuRobo pick planning failed for %s (attempt %d/%d).", obj_name, attempt_idx,
+                        len(candidate_grasps),
+                    )
+                    continue
+
+                pick_waypoints = planner.get_arm_waypoints(arm_joint_names)
+                _log_plan_stats(f"pick:{obj_name}", pick_waypoints, env.step_dt)
+
+                # -- 3. Execute pick (fingers open) --
+                if not _execute_waypoints(
+                    env=env,
+                    robot=robot,
+                    ee_frame=ee_frame,
+                    waypoints=pick_waypoints,
+                    gripper_cmd=GRIPPER_OPEN_CMD,
+                    arm_joint_ids=arm_joint_ids,
+                    recorder=recorder,
+                    grasp_confidence=candidate.confidence,
+                    grasp_object_idx=obj_idx,
+                    label=f"pick:{obj_name}",
+                    wp_ee_positions=planner.get_waypoint_ee_positions(),
+                ):
+                    episode_aborted = True
                     break
+
+                # Reach accuracy: measured panda_hand position vs the grasp target
+                # (same frame — ee_frame target 0 is panda_hand with zero offset).
+                ee_meas = (ee_frame.data.target_pos_w[0, 0, :] - env.scene.env_origins[0]).detach().cpu()
+                reach_err = torch.linalg.vector_norm(ee_meas - candidate.position).item()
+                logging.info("    Pick reach error: %.4f m (EE vs grasp target)", reach_err)
+
+                # -- 4. Close gripper --
+                if not _hold_gripper(
+                    env=env,
+                    robot=robot,
+                    ee_frame=ee_frame,
+                    arm_joint_ids=arm_joint_ids,
+                    gripper_cmd=GRIPPER_CLOSE_CMD,
+                    steps=args.gripper_steps,
+                    recorder=recorder,
+                    grasp_confidence=candidate.confidence,
+                    grasp_object_idx=obj_idx,
+                    finger_joint_ids=finger_joint_ids,
+                    label=f"close:{obj_name}",
+                ):
+                    episode_aborted = True
+                    break
+
+                # -- 4b. Verify the grasp: did the fingers close on the object or on
+                # air? See MIN_GRASP_FINGER_POS for why this threshold is safe for
+                # thin-rim objects.
+                fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
+                if _grasp_gripped_object(robot, finger_joint_ids):
+                    logging.info(
+                        "    Gripper closed on %s (fingers=%s) — grasp CONFIRMED, proceeding to place.",
+                        obj_name, _fmt(fingers),
+                    )
+                    best_grasp = candidate
+                    grasp_confirmed = True
+                    break
+
                 logging.warning(
-                    "    CuRobo pick planning failed for %s (attempt %d/%d).", obj_name, attempt_idx,
-                    len(candidate_grasps),
+                    "    Grasp check failed for %s (attempt %d/%d): fingers=%s <= %.4f m — closed on air.",
+                    obj_name, attempt_idx, len(candidate_grasps), _fmt(fingers), MIN_GRASP_FINGER_POS,
                 )
+                if not _hold_gripper(
+                    env=env, robot=robot, ee_frame=ee_frame,
+                    arm_joint_ids=arm_joint_ids,
+                    gripper_cmd=GRIPPER_OPEN_CMD,
+                    steps=args.gripper_steps,
+                    recorder=recorder,
+                    grasp_confidence=0.0, grasp_object_idx=0,
+                    finger_joint_ids=finger_joint_ids,
+                    label=f"open:{obj_name}",
+                ):
+                    episode_aborted = True
+                    break
 
-            if not pick_ok:
+            if episode_aborted:
+                break
+            if not grasp_confirmed:
+                logging.warning(
+                    "    All %d grasp attempt(s) failed for %s (planning or verification) — skipping.",
+                    len(candidate_grasps), obj_name,
+                )
                 continue
-
-            pick_waypoints = planner.get_arm_waypoints(arm_joint_names)
-            _log_plan_stats(f"pick:{obj_name}", pick_waypoints, env.step_dt)
-
-            # -- 3. Execute pick (fingers open) --
-            if not _execute_waypoints(
-                env=env,
-                robot=robot,
-                ee_frame=ee_frame,
-                waypoints=pick_waypoints,
-                gripper_cmd=GRIPPER_OPEN_CMD,
-                arm_joint_ids=arm_joint_ids,
-                recorder=recorder,
-                grasp_confidence=best_grasp.confidence,
-                grasp_object_idx=obj_idx,
-                label=f"pick:{obj_name}",
-                wp_ee_positions=planner.get_waypoint_ee_positions(),
-            ):
-                episode_aborted = True
-                break
-
-            # Reach accuracy: measured panda_hand position vs the grasp target
-            # (same frame — ee_frame target 0 is panda_hand with zero offset).
-            ee_meas = (ee_frame.data.target_pos_w[0, 0, :] - env.scene.env_origins[0]).detach().cpu()
-            reach_err = torch.linalg.vector_norm(ee_meas - best_grasp.position).item()
-            logging.info("    Pick reach error: %.4f m (EE vs grasp target)", reach_err)
-
-            # -- 4. Close gripper --
-            if not _hold_gripper(
-                env=env,
-                robot=robot,
-                ee_frame=ee_frame,
-                arm_joint_ids=arm_joint_ids,
-                gripper_cmd=GRIPPER_CLOSE_CMD,
-                steps=args.gripper_steps,
-                recorder=recorder,
-                grasp_confidence=best_grasp.confidence,
-                grasp_object_idx=obj_idx,
-                finger_joint_ids=finger_joint_ids,
-                label=f"close:{obj_name}",
-            ):
-                episode_aborted = True
-                break
-
-            # -- 4b. No grasp verification: the gripper closed on the planned
-            # grasp pose, and we proceed straight to the place motion. Whether
-            # the object actually travelled shows up in the recorded poses and
-            # the release log below.
-            fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
-            logging.info("    Gripper closed on %s (fingers=%s) — proceeding to place.", obj_name, _fmt(fingers))
 
             # -- 5. Plan place --
             place_ok = planner.plan_place(obj_name, slot_index=obj_idx - 1)
