@@ -590,6 +590,7 @@ def _execute_waypoints(
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
             frame=frame,
+            gripper_cmd=gripper_cmd,
         )
 
     for i, wp in enumerate(waypoints):
@@ -711,6 +712,7 @@ def _hold_gripper(
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
             frame=frame,
+            gripper_cmd=gripper_cmd,
         )
 
         if finger_joint_ids is not None:
@@ -1012,6 +1014,24 @@ def main() -> None:
         recorder.start_episode()
         num_packed = 0
         episode_aborted = False
+
+        # Record a synthetic "step 0" snapshot right after reset+settle, before any
+        # waypoint action has been applied. This is the true pre-action state that
+        # convert_to_mimic_hdf5.py needs to build Isaac Lab Mimic's `initial_state`
+        # from -- the first real waypoint below is already the result of one action,
+        # so without this the converter would have to approximate the initial state.
+        joint_pos0, ee_pos0, ee_quat0, obj_poses0, bin_pose0, frame0 = _snapshot(robot, ee_frame, env)
+        recorder.record_step(
+            joint_pos=joint_pos0,
+            ee_pos=ee_pos0,
+            ee_quat=ee_quat0,
+            obj_poses=obj_poses0,
+            bin_pose=bin_pose0,
+            grasp_confidence=0.0,
+            grasp_object_idx=0,
+            frame=frame0,
+            gripper_cmd=GRIPPER_OPEN_CMD,
+        )
 
         # One object at a time: query grasp -> pick -> place -> return home,
         # then move on to the next object from the same home configuration.
