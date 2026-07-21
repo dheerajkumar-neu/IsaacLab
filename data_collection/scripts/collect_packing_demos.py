@@ -62,6 +62,17 @@ Arguments
                      set (default: front_cam). One of: wrist_cam, table_top_cam,
                      front_cam, table_side_cam_1, table_side_cam_2, table_side_cam_3,
                      table_side_cam_4, env_top_cam.
+  --dataset_format   'proprio' (default): unchanged HDF5 output, respects
+                     --record_type/--record_camera above. 'vla': also records the
+                     raw per-step action tensor and RGB frames from BOTH wrist_cam
+                     and table_top_cam into the same HDF5 (superseding
+                     --record_type/--record_camera), plus a --task_description file
+                     attribute — the fields data_collection/scripts/
+                     convert_to_lerobot.py needs to build a pi-0/pi-0.5-style
+                     LeRobot dataset.
+  --task_description Language instruction stored on the HDF5 file when
+                     --dataset_format vla is set (default: "pick up all objects
+                     from the table and place them into the bin").
 """
 
 from __future__ import annotations
@@ -242,6 +253,17 @@ parser.add_argument("--record_camera", type=str, default="front_cam",
                     help="Scene camera to capture when --record_type actions_frames is set. "
                          "Available: wrist_cam, table_top_cam, front_cam, table_side_cam_1, "
                          "table_side_cam_2, table_side_cam_3, table_side_cam_4, env_top_cam.")
+parser.add_argument("--dataset_format", type=str, default="proprio",
+                    choices=["proprio", "vla"],
+                    help="'proprio' (default): unchanged HDF5 output, respects --record_type/"
+                         "--record_camera. 'vla': also records the raw per-step action tensor "
+                         "and RGB frames from BOTH wrist_cam and table_top_cam (superseding "
+                         "--record_type/--record_camera), plus --task_description, so "
+                         "convert_to_lerobot.py can build a pi-0/pi-0.5-style LeRobot dataset.")
+parser.add_argument("--task_description", type=str,
+                    default="pick up all objects from the table and place them into the bin",
+                    help="Language instruction stored on the HDF5 file when --dataset_format "
+                         "vla is set.")
 args = parser.parse_args()
 if args.debug:
     args.object_placement = "fixed"
@@ -420,12 +442,15 @@ def _get_joint_ids(robot: Articulation) -> tuple[list[int], list[int]]:
 # Data snapshot helper
 # --------------------------------------------------------------------------
 
+VLA_CAMERAS = ["wrist_cam", "table_top_cam"]
+
+
 def _snapshot(
     robot: Articulation,
     ee_frame: FrameTransformer,
     env: ManagerBasedEnv,
     env_id: int = 0,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict, tuple, np.ndarray | None]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict, tuple, dict[str, np.ndarray] | None]:
     """
     Read current sim state for one timestep.
 
@@ -435,8 +460,10 @@ def _snapshot(
         ee_quat    (4,)
         obj_poses  dict: object_name -> (pos (3,), quat (4,))
         bin_pose   (pos (3,), quat (4,))
-        frame      (H, W, 3) uint8 RGB from args.record_camera, or None unless
-                   args.record_type == "actions_frames"
+        frames     dict camera_name -> (H, W, 3) uint8 RGB, or None unless
+                   --dataset_format vla or --record_type actions_frames.
+                   'vla': one entry per VLA_CAMERAS. 'actions_frames': one entry
+                   for args.record_camera.
     """
     joint_pos = robot.data.joint_pos[env_id].detach().cpu()
 
@@ -454,14 +481,20 @@ def _snapshot(
     bin_pos = (bin_obj.data.root_pos_w[env_id] - env.scene.env_origins[env_id]).detach().cpu()
     bin_quat = bin_obj.data.root_quat_w[env_id].detach().cpu()
 
-    frame = None
-    if args.record_type == "actions_frames":
-        camera = env.scene[args.record_camera]
+    def _rgb(camera_name: str) -> np.ndarray | None:
+        camera = env.scene[camera_name]
         rgb = camera.data.output.get("rgb")
-        if rgb is not None:
-            frame = rgb[env_id].detach().cpu().numpy().astype(np.uint8)
+        return rgb[env_id].detach().cpu().numpy().astype(np.uint8) if rgb is not None else None
 
-    return joint_pos, ee_pos, ee_quat, obj_poses, (bin_pos, bin_quat), frame
+    frames: dict[str, np.ndarray] | None = None
+    if args.dataset_format == "vla":
+        frames = {f"{cam}_rgb": img for cam in VLA_CAMERAS if (img := _rgb(cam)) is not None}
+    elif args.record_type == "actions_frames":
+        img = _rgb(args.record_camera)
+        if img is not None:
+            frames = {f"{args.record_camera}_rgb": img}
+
+    return joint_pos, ee_pos, ee_quat, obj_poses, (bin_pos, bin_quat), frames
 
 
 # --------------------------------------------------------------------------
@@ -579,8 +612,8 @@ def _execute_waypoints(
 
     diverged = False
 
-    def _record() -> None:
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
+    def _record(action: torch.Tensor) -> None:
+        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frames = _snapshot(robot, ee_frame, env)
         recorder.record_step(
             joint_pos=joint_pos,
             ee_pos=ee_pos,
@@ -589,7 +622,8 @@ def _execute_waypoints(
             bin_pose=bin_pose,
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
-            frame=frame,
+            frames=frames,
+            action=action[0].detach().cpu() if args.dataset_format == "vla" else None,
         )
 
     for i, wp in enumerate(waypoints):
@@ -601,7 +635,7 @@ def _execute_waypoints(
             device=env.device,
         )
         env_reset = _step_env(env, action)
-        _record()
+        _record(action)
 
         # Per-step debug log: commanded joints, raw action, measured joints,
         # tracking error, commanded EE (FK) and measured EE.
@@ -651,7 +685,7 @@ def _execute_waypoints(
             device=env.device,
         )
         env_reset = _step_env(env, action)
-        _record()
+        _record(action)
         settle_steps += 1
         if env_reset:
             logging.warning("    [%s] env auto-reset while settling — aborting episode.", label)
@@ -701,7 +735,7 @@ def _hold_gripper(
         )
         env_reset = _step_env(env, action)
 
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
+        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frames = _snapshot(robot, ee_frame, env)
         recorder.record_step(
             joint_pos=joint_pos,
             ee_pos=ee_pos,
@@ -710,7 +744,8 @@ def _hold_gripper(
             bin_pose=bin_pose,
             grasp_confidence=grasp_confidence,
             grasp_object_idx=grasp_object_idx,
-            frame=frame,
+            frames=frames,
+            action=action[0].detach().cpu() if args.dataset_format == "vla" else None,
         )
 
         if finger_joint_ids is not None:
@@ -986,18 +1021,32 @@ def main() -> None:
     logging.getLogger("CuroboPlanner_0").setLevel(logging.DEBUG)
 
     # ---- data recorder ----
-    frame_key: str | None = None
-    if args.record_type == "actions_frames":
+    frame_keys: list[str] = []
+    task_description: str | None = None
+    if args.dataset_format == "vla":
+        missing_vla_cams = [c for c in VLA_CAMERAS if c not in env.scene.keys()]
+        if missing_vla_cams:
+            raise ValueError(
+                f"--dataset_format vla requires scene cameras {VLA_CAMERAS}, missing: "
+                f"{missing_vla_cams}. Check the env cfg (Isaac-Pack-Object-Franka-Camera-v0)."
+            )
+        frame_keys = [f"{cam}_rgb" for cam in VLA_CAMERAS]
+        task_description = args.task_description
+        logging.info(
+            "Recording VLA dataset fields: actions + per-step RGB from %s | task_description=%r",
+            VLA_CAMERAS, task_description,
+        )
+    elif args.record_type == "actions_frames":
         if args.record_camera not in env.scene.keys():
             raise ValueError(
                 f"--record_camera {args.record_camera!r} is not a scene camera. "
                 f"Check the env cfg (Isaac-Pack-Object-Franka-Camera-v0) camera names."
             )
-        frame_key = f"{args.record_camera}_rgb"
-        logging.info("Recording per-step RGB frames from %s (key=%s)", args.record_camera, frame_key)
+        frame_keys = [f"{args.record_camera}_rgb"]
+        logging.info("Recording per-step RGB frames from %s (key=%s)", args.record_camera, frame_keys[0])
 
     output_path = Path(args.output)
-    recorder = HDF5EpisodeRecorder(output_path, frame_key=frame_key)
+    recorder = HDF5EpisodeRecorder(output_path, frame_keys=frame_keys, task_description=task_description)
 
     for ep in range(args.num_episodes):
         logging.info("=== Episode %d/%d ===", ep + 1, args.num_episodes)
