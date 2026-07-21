@@ -60,17 +60,3 @@ gym.register(
     },
     disable_env_checker=True,
 )
-
-##
-# Inverse Kinematics - Relative Pose Control + Visuomotor (wrist/table-top RGB in the
-# policy obs group, so Isaac Lab Mimic can record and replay image observations)
-##
-
-gym.register(
-    id="Isaac-Pack-Object-Franka-IK-Rel-Visuomotor-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    kwargs={
-        "env_cfg_entry_point": f"{__name__}.franka_pack_ik_rel_visuomotor_env_cfg:FrankaPackIKRelVisuomotorEnvCfg",
-    },
-    disable_env_checker=True,
-)

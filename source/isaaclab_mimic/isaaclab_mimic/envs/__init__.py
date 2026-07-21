@@ -172,14 +172,3 @@ gym.register(
     },
     disable_env_checker=True,
 )
-
-gym.register(
-    id="Isaac-Pack-Object-Franka-IK-Rel-Visuomotor-Mimic-v0",
-    entry_point=f"{__name__}.franka_pack_ik_rel_mimic_env:FrankaPackIKRelMimicEnv",
-    kwargs={
-        "env_cfg_entry_point": (
-            f"{__name__}.franka_pack_ik_rel_visuomotor_mimic_env_cfg:FrankaPackIKRelVisuomotorMimicEnvCfg"
-        ),
-    },
-    disable_env_checker=True,
-)
