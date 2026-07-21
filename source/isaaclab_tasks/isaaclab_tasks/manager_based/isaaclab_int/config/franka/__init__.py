@@ -5,6 +5,8 @@
 
 import gymnasium as gym
 
+from . import agents
+
 ##
 # Register Gym environments.
 ##
@@ -18,6 +20,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     kwargs={
         "env_cfg_entry_point": f"{__name__}.franka_pack_joint_pos_env_cfg:FrankaPackEnvCfg",
+        "robomimic_bc_cfg_entry_point": f"{agents.__name__}:robomimic/bc_rnn_low_dim.json",
     },
     disable_env_checker=True,
 )
