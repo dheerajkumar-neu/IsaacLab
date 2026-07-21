@@ -18,6 +18,10 @@ Episode format (per timestep arrays, shape (T, …)):
   bin_quat           (T, 4)
   grasp_confidence   (T,)     — active grasp confidence (0.0 when no grasp executing)
   grasp_object_idx   (T,)     — 0 = no grasp, 1/2/3 = object index being grasped
+  gripper_cmd        (T,)     — commanded gripper action for this step (GRIPPER_OPEN_CMD
+                      or GRIPPER_CLOSE_CMD from collect_packing_demos.py). Recorded so
+                      offline conversion (see convert_to_mimic_hdf5.py) doesn't have to
+                      infer open/close from finger joint positions.
 
   action             (T, 8)   — optional, the raw env action tensor (7 arm + 1
                       gripper) sent to env.step() for this timestep; only present
@@ -28,6 +32,12 @@ Episode format (per timestep arrays, shape (T, …)):
                       camera (e.g. "front_cam_rgb"), one dataset per key in
                       frame_keys (--record_type actions_frames or --dataset_format
                       vla in collect_packing_demos.py).
+
+Step 0 of every episode is a synthetic snapshot taken right after reset+settle,
+before any waypoint action has been applied (see collect_packing_demos.py's episode
+loop) — this gives convert_to_mimic_hdf5.py a true pre-action "initial state" to
+build Isaac Lab Mimic's ``initial_state`` from, instead of approximating it with the
+state after the first real action.
 
 Scalar per episode:
   success            bool
@@ -109,6 +119,7 @@ class HDF5EpisodeRecorder:
             "bin_quat": [],
             "grasp_confidence": [],
             "grasp_object_idx": [],
+            "gripper_cmd": [],
         }
         for key in self._frame_keys:
             self._buf[key] = []
@@ -127,6 +138,7 @@ class HDF5EpisodeRecorder:
         grasp_object_idx: int = 0,
         frames: dict[str, np.ndarray | torch.Tensor] | None = None,
         action: torch.Tensor | None = None,
+        gripper_cmd: float = 0.0,
     ) -> None:
         """Append one timestep to the episode buffer.
 
@@ -146,6 +158,8 @@ class HDF5EpisodeRecorder:
             action:           (8,) raw env action tensor for this step. Required
                               if the recorder was constructed with
                               task_description (VLA mode).
+            gripper_cmd:      Commanded gripper action for this step (GRIPPER_OPEN_CMD
+                              or GRIPPER_CLOSE_CMD).
         """
         if not self._recording:
             raise RuntimeError("call start_episode() before record_step()")
@@ -191,6 +205,7 @@ class HDF5EpisodeRecorder:
 
         self._buf["grasp_confidence"].append(np.array([grasp_confidence], dtype=np.float32))
         self._buf["grasp_object_idx"].append(np.array([grasp_object_idx], dtype=np.int32))
+        self._buf["gripper_cmd"].append(np.array([gripper_cmd], dtype=np.float32))
 
     def close_episode(self, success: bool, num_objects_packed: int = 0) -> None:
         """Write the accumulated buffer to HDF5 and advance the episode counter.
