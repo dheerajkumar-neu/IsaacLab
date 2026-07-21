@@ -54,14 +54,19 @@ Arguments
                      init_state poses every reset. In BOTH modes objects spawn
                      upright/standing (easiest geometry for GraspGenX).
   --debug            Deprecated alias for --object_placement fixed.
-  --record_type      'actions' (default): record only the current joint/EE/object
-                     states, same as before. 'actions_frames': also record a
-                     per-step RGB frame from --record_camera, so hdf5_to_mp4-style
-                     tooling can turn an episode into a video.
-  --record_camera    Scene camera to capture when --record_type actions_frames is
-                     set (default: front_cam). One of: wrist_cam, table_top_cam,
-                     front_cam, table_side_cam_1, table_side_cam_2, table_side_cam_3,
-                     table_side_cam_4, env_top_cam.
+
+Output format
+-------------
+The HDF5 output uses IsaacLab's native recorder schema (data/demo_N/{actions,
+initial_state, obs, states}), attached via env_cfg.recorders — no custom recorder
+code, no format bridging. `actions` are the REAL joint-position actions this script
+sends (unchanged cuRobo control loop). This dataset is meant to go straight to
+scripts/imitation_learning/robomimic/train.py for direct BC training — the
+isaaclab_mimic annotate/generate steps are intentionally skipped (see project notes:
+mimicgen's value is synthesizing many demos from few, which doesn't apply here since
+this collector can just generate more real episodes directly). Per-step RGB-frame
+recording (previously --record_type actions_frames) is no longer supported by this
+recorder — that debug metadata was part of the old custom recorder being replaced.
 """
 
 from __future__ import annotations
@@ -232,16 +237,6 @@ parser.add_argument("--object_placement", type=str, default="random",
                          "in the env cfg, identical every episode.")
 parser.add_argument("--debug", action="store_true",
                     help="Deprecated alias for --object_placement fixed.")
-parser.add_argument("--record_type", type=str, default="actions",
-                    choices=["actions", "actions_frames"],
-                    help="'actions' (default): record only the current joint/EE/object "
-                         "states, unchanged from before. 'actions_frames': also record a "
-                         "per-step RGB frame from --record_camera into the HDF5 output, so "
-                         "episodes_to_mp4.py can render a video of the episode.")
-parser.add_argument("--record_camera", type=str, default="front_cam",
-                    help="Scene camera to capture when --record_type actions_frames is set. "
-                         "Available: wrist_cam, table_top_cam, front_cam, table_side_cam_1, "
-                         "table_side_cam_2, table_side_cam_3, table_side_cam_4, env_top_cam.")
 args = parser.parse_args()
 if args.debug:
     args.object_placement = "fixed"
@@ -269,12 +264,12 @@ _reassert_logging()
 # Normal imports (IsaacSim is now running)
 # --------------------------------------------------------------------------
 import gymnasium as gym  # noqa: E402
-import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from isaaclab.assets import Articulation  # noqa: E402
 from isaaclab.envs.manager_based_env import ManagerBasedEnv  # noqa: E402
-from isaaclab.managers import EventTermCfg as EventTerm, SceneEntityCfg  # noqa: E402
+from isaaclab.envs.mdp.recorders.recorders_cfg import ActionStateRecorderManagerCfg  # noqa: E402
+from isaaclab.managers import DatasetExportMode, EventTermCfg as EventTerm, SceneEntityCfg  # noqa: E402
 from isaaclab.sensors import FrameTransformer  # noqa: E402
 
 # Register the packing env and its config
@@ -286,13 +281,13 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 from data_collection.grasp_client import GraspResult, GraspGenXDepthClient, GraspGenXIsaacClient, filter_grasps  # noqa: E402
 from data_collection.motion_planning import PackMotionPlanner  # noqa: E402
-from data_collection.data_recording import HDF5EpisodeRecorder  # noqa: E402
 
 
 # --------------------------------------------------------------------------
 # Constants
 # --------------------------------------------------------------------------
 ENV_ID = "Isaac-Pack-Object-Franka-Camera-v0"
+
 GRIPPER_OPEN_CMD: float = 1.0
 GRIPPER_CLOSE_CMD: float = -1.0
 
@@ -417,54 +412,6 @@ def _get_joint_ids(robot: Articulation) -> tuple[list[int], list[int]]:
 
 
 # --------------------------------------------------------------------------
-# Data snapshot helper
-# --------------------------------------------------------------------------
-
-def _snapshot(
-    robot: Articulation,
-    ee_frame: FrameTransformer,
-    env: ManagerBasedEnv,
-    env_id: int = 0,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict, tuple, np.ndarray | None]:
-    """
-    Read current sim state for one timestep.
-
-    Returns:
-        joint_pos  (9,)
-        ee_pos     (3,)
-        ee_quat    (4,)
-        obj_poses  dict: object_name -> (pos (3,), quat (4,))
-        bin_pose   (pos (3,), quat (4,))
-        frame      (H, W, 3) uint8 RGB from args.record_camera, or None unless
-                   args.record_type == "actions_frames"
-    """
-    joint_pos = robot.data.joint_pos[env_id].detach().cpu()
-
-    ee_pos = (ee_frame.data.target_pos_w[env_id, 0, :] - env.scene.env_origins[env_id]).detach().cpu()
-    ee_quat = ee_frame.data.target_quat_w[env_id, 0, :].detach().cpu()
-
-    obj_poses: dict[str, tuple[torch.Tensor, torch.Tensor]] = {}
-    for obj_name in OBJECT_NAMES:
-        obj = env.scene[obj_name]
-        pos = (obj.data.root_pos_w[env_id] - env.scene.env_origins[env_id]).detach().cpu()
-        quat = obj.data.root_quat_w[env_id].detach().cpu()
-        obj_poses[obj_name] = (pos, quat)
-
-    bin_obj = env.scene["packing_bin"]
-    bin_pos = (bin_obj.data.root_pos_w[env_id] - env.scene.env_origins[env_id]).detach().cpu()
-    bin_quat = bin_obj.data.root_quat_w[env_id].detach().cpu()
-
-    frame = None
-    if args.record_type == "actions_frames":
-        camera = env.scene[args.record_camera]
-        rgb = camera.data.output.get("rgb")
-        if rgb is not None:
-            frame = rgb[env_id].detach().cpu().numpy().astype(np.uint8)
-
-    return joint_pos, ee_pos, ee_quat, obj_poses, (bin_pos, bin_quat), frame
-
-
-# --------------------------------------------------------------------------
 # Sim stepping helpers
 # --------------------------------------------------------------------------
 
@@ -529,16 +476,13 @@ def _execute_waypoints(
     waypoints: list[torch.Tensor],
     gripper_cmd: float,
     arm_joint_ids: list[int],
-    recorder: HDF5EpisodeRecorder,
-    grasp_confidence: float,
-    grasp_object_idx: int,
     label: str = "",
     wp_ee_positions: list[torch.Tensor] | None = None,
     settle_tol: float = 0.01,
     max_settle_steps: int = 24,
 ) -> bool:
     """
-    Step through CuRobo joint-position waypoints and record each step.
+    Step through CuRobo joint-position waypoints.
 
     One waypoint is consumed per env step; because the plan is interpolated at
     exactly ``env.step_dt``, this reproduces cuRobo's planned velocity profile.
@@ -546,11 +490,12 @@ def _execute_waypoints(
     (max joint error < ``settle_tol``) or ``max_settle_steps`` is exhausted, so
     the EE has actually arrived before the gripper is toggled.
 
+    Every real env.step() is independently captured by IsaacLab's native recorder
+    (attached to env_cfg.recorders) — actions/obs/states need no bookkeeping here.
+
     Args:
         waypoints:        List of (num_arm_joints,) tensors from PackMotionPlanner.
         gripper_cmd:      GRIPPER_OPEN_CMD or GRIPPER_CLOSE_CMD to hold during execution.
-        grasp_confidence: Meta value to stamp on each recorded step.
-        grasp_object_idx: Meta value to stamp on each recorded step.
         label:            Tag for log lines (e.g. "pick:object_01").
         wp_ee_positions:  Optional per-waypoint commanded EE positions (from FK)
                           logged alongside the measured EE position.
@@ -579,19 +524,6 @@ def _execute_waypoints(
 
     diverged = False
 
-    def _record() -> None:
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
-        recorder.record_step(
-            joint_pos=joint_pos,
-            ee_pos=ee_pos,
-            ee_quat=ee_quat,
-            obj_poses=obj_poses,
-            bin_pose=bin_pose,
-            grasp_confidence=grasp_confidence,
-            grasp_object_idx=grasp_object_idx,
-            frame=frame,
-        )
-
     for i, wp in enumerate(waypoints):
         action = _make_action(
             robot=robot,
@@ -601,7 +533,6 @@ def _execute_waypoints(
             device=env.device,
         )
         env_reset = _step_env(env, action)
-        _record()
 
         # Per-step debug log: commanded joints, raw action, measured joints,
         # tracking error, commanded EE (FK) and measured EE.
@@ -651,7 +582,6 @@ def _execute_waypoints(
             device=env.device,
         )
         env_reset = _step_env(env, action)
-        _record()
         settle_steps += 1
         if env_reset:
             logging.warning("    [%s] env auto-reset while settling — aborting episode.", label)
@@ -679,9 +609,6 @@ def _hold_gripper(
     arm_joint_ids: list[int],
     gripper_cmd: float,
     steps: int,
-    recorder: HDF5EpisodeRecorder,
-    grasp_confidence: float,
-    grasp_object_idx: int,
     finger_joint_ids: list[int] | None = None,
     label: str = "gripper",
 ) -> bool:
@@ -700,18 +627,6 @@ def _hold_gripper(
             device=env.device,
         )
         env_reset = _step_env(env, action)
-
-        joint_pos, ee_pos, ee_quat, obj_poses, bin_pose, frame = _snapshot(robot, ee_frame, env)
-        recorder.record_step(
-            joint_pos=joint_pos,
-            ee_pos=ee_pos,
-            ee_quat=ee_quat,
-            obj_poses=obj_poses,
-            bin_pose=bin_pose,
-            grasp_confidence=grasp_confidence,
-            grasp_object_idx=grasp_object_idx,
-            frame=frame,
-        )
 
         if finger_joint_ids is not None:
             fingers = robot.data.joint_pos[0, finger_joint_ids].detach().cpu()
@@ -813,7 +728,6 @@ def _return_home(
     planner,
     arm_joint_ids: list[int],
     arm_joint_names: list[str],
-    recorder: HDF5EpisodeRecorder,
 ) -> bool:
     """Plan and execute a joint-space motion back to the robot's home configuration.
 
@@ -837,9 +751,6 @@ def _return_home(
         waypoints=waypoints,
         gripper_cmd=GRIPPER_OPEN_CMD,
         arm_joint_ids=arm_joint_ids,
-        recorder=recorder,
-        grasp_confidence=0.0,
-        grasp_object_idx=0,
         label="home",
         wp_ee_positions=planner.get_waypoint_ee_positions(),
     )
@@ -854,6 +765,19 @@ def main() -> None:
 
     # ---- environment ----
     env_cfg = parse_env_cfg(ENV_ID, device="cuda:0", num_envs=1)
+    env_cfg.env_name = ENV_ID
+
+    # ---- native recorder (IsaacLab's own ActionStateRecorderManagerCfg) ----
+    # Attaching this BEFORE gym.make makes IsaacLab auto-populate initial_state/
+    # states/obs/actions on every env.step()/env.reset() in the standard
+    # data/demo_N/{...} schema — no custom recorder needed. `actions` holds the REAL
+    # joint-position actions this script sends; this dataset goes straight to
+    # robomimic BC training (no isaaclab_mimic annotate/generate step).
+    output_path = Path(args.output)
+    env_cfg.recorders = ActionStateRecorderManagerCfg()
+    env_cfg.recorders.dataset_export_dir_path = str(output_path.parent)
+    env_cfg.recorders.dataset_filename = output_path.stem
+    env_cfg.recorders.dataset_export_mode = DatasetExportMode.EXPORT_SUCCEEDED_ONLY
 
     # The script owns the episode lifecycle (env.reset() at the top of each episode).
     # Disable every termination that would make ManagerBasedRLEnv auto-reset mid-episode
@@ -985,19 +909,11 @@ def main() -> None:
     # CuroboPlanner logs them at DEBUG on its own logger, which defaults to INFO.
     logging.getLogger("CuroboPlanner_0").setLevel(logging.DEBUG)
 
-    # ---- data recorder ----
-    frame_key: str | None = None
-    if args.record_type == "actions_frames":
-        if args.record_camera not in env.scene.keys():
-            raise ValueError(
-                f"--record_camera {args.record_camera!r} is not a scene camera. "
-                f"Check the env cfg (Isaac-Pack-Object-Franka-Camera-v0) camera names."
-            )
-        frame_key = f"{args.record_camera}_rgb"
-        logging.info("Recording per-step RGB frames from %s (key=%s)", args.record_camera, frame_key)
-
-    output_path = Path(args.output)
-    recorder = HDF5EpisodeRecorder(output_path, frame_key=frame_key)
+    logging.info(
+        "Recording native data/demo_N/{actions,initial_state,obs,states} via "
+        "env_cfg.recorders -> %s (joint-position actions, straight to robomimic BC training).",
+        output_path,
+    )
 
     for ep in range(args.num_episodes):
         logging.info("=== Episode %d/%d ===", ep + 1, args.num_episodes)
@@ -1009,7 +925,6 @@ def main() -> None:
             env.sim.step(render=not args.headless)
         env.scene.update(env.step_dt)
 
-        recorder.start_episode()
         num_packed = 0
         episode_aborted = False
 
@@ -1113,9 +1028,6 @@ def main() -> None:
                     waypoints=pick_waypoints,
                     gripper_cmd=GRIPPER_OPEN_CMD,
                     arm_joint_ids=arm_joint_ids,
-                    recorder=recorder,
-                    grasp_confidence=candidate.confidence,
-                    grasp_object_idx=obj_idx,
                     label=f"pick:{obj_name}",
                     wp_ee_positions=planner.get_waypoint_ee_positions(),
                 ):
@@ -1136,9 +1048,6 @@ def main() -> None:
                     arm_joint_ids=arm_joint_ids,
                     gripper_cmd=GRIPPER_CLOSE_CMD,
                     steps=args.gripper_steps,
-                    recorder=recorder,
-                    grasp_confidence=candidate.confidence,
-                    grasp_object_idx=obj_idx,
                     finger_joint_ids=finger_joint_ids,
                     label=f"close:{obj_name}",
                 ):
@@ -1167,8 +1076,6 @@ def main() -> None:
                     arm_joint_ids=arm_joint_ids,
                     gripper_cmd=GRIPPER_OPEN_CMD,
                     steps=args.gripper_steps,
-                    recorder=recorder,
-                    grasp_confidence=0.0, grasp_object_idx=0,
                     finger_joint_ids=finger_joint_ids,
                     label=f"open:{obj_name}",
                 ):
@@ -1194,11 +1101,11 @@ def main() -> None:
                     arm_joint_ids=arm_joint_ids,
                     gripper_cmd=GRIPPER_OPEN_CMD,
                     steps=args.gripper_steps,
-                    recorder=recorder,
-                    grasp_confidence=0.0, grasp_object_idx=0,
                     finger_joint_ids=finger_joint_ids,
                     label=f"open:{obj_name}",
-                ) or not _return_home(env, robot, ee_frame, planner, arm_joint_ids, arm_joint_names, recorder):
+                ) or not _return_home(
+                    env, robot, ee_frame, planner, arm_joint_ids, arm_joint_names
+                ):
                     episode_aborted = True
                     break
                 continue
@@ -1214,9 +1121,6 @@ def main() -> None:
                 waypoints=place_waypoints,
                 gripper_cmd=GRIPPER_CLOSE_CMD,
                 arm_joint_ids=arm_joint_ids,
-                recorder=recorder,
-                grasp_confidence=best_grasp.confidence,
-                grasp_object_idx=obj_idx,
                 label=f"place:{obj_name}",
                 wp_ee_positions=planner.get_waypoint_ee_positions(),
             ):
@@ -1231,9 +1135,6 @@ def main() -> None:
                 arm_joint_ids=arm_joint_ids,
                 gripper_cmd=GRIPPER_OPEN_CMD,
                 steps=args.gripper_steps,
-                recorder=recorder,
-                grasp_confidence=0.0,
-                grasp_object_idx=0,
                 finger_joint_ids=finger_joint_ids,
                 label=f"release:{obj_name}",
             ):
@@ -1253,12 +1154,31 @@ def main() -> None:
             logging.info("    Packed %s successfully.", obj_name)
 
             # -- 8. Return to home before planning the next object --
-            if not _return_home(env, robot, ee_frame, planner, arm_joint_ids, arm_joint_names, recorder):
+            if not _return_home(
+                env, robot, ee_frame, planner, arm_joint_ids, arm_joint_names
+            ):
                 episode_aborted = True
                 break
 
         episode_success = (num_packed == len(OBJECT_NAMES)) and not episode_aborted
-        recorder.close_episode(success=episode_success, num_objects_packed=num_packed)
+
+        # Export via IsaacLab's own recorder manager (mirrors scripts/tools/record_demos.py's
+        # process_success_condition): record_pre_reset(force=False) captures pre-reset data
+        # without exporting yet, set_success_to_episodes stamps OUR success determination
+        # (the termination-based auto-check would always say False — terminations.success
+        # is disabled above so the env never auto-resets mid-episode), then export_episodes
+        # actually writes (EXPORT_SUCCEEDED_ONLY: only if episode_success) and always clears
+        # the per-env episode buffer either way, so the next episode starts clean.
+        env.recorder_manager.record_pre_reset([0], force_export_or_skip=False)
+        env.recorder_manager.set_success_to_episodes(
+            [0], torch.tensor([[episode_success]], dtype=torch.bool, device=env.device)
+        )
+        exported_before = env.recorder_manager.exported_successful_episode_count
+        env.recorder_manager.export_episodes([0])
+        exported_after = env.recorder_manager.exported_successful_episode_count
+        if exported_after > exported_before:
+            logging.info("  Exported demo_%d.", exported_after - 1)
+
         logging.info(
             "  Episode done — packed %d/3, success=%s%s",
             num_packed, episode_success, " (aborted: env auto-reset)" if episode_aborted else "",
@@ -1266,10 +1186,10 @@ def main() -> None:
 
     grasp_client.close()
     isaac_client.close()
-    recorder.close()
     env.close()
-    simulation_app.close()
     logging.info("Data saved to %s", output_path.resolve())
+
+    simulation_app.close()
 
 
 if __name__ == "__main__":
