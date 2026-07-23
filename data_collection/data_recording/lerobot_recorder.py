@@ -18,11 +18,21 @@ only assigned to WRITTEN episodes, so both stay contiguous with no gaps.
 Per-camera video frames are streamed to a temp raw-rgb24 file during the episode
 (not buffered in memory) and only encoded to mp4 (via an ffmpeg subprocess,
 h264/yuv420p) if the episode is kept; otherwise the temp file is deleted.
+
+Crash/resume safety: __init__ resumes episode_index/global_frame_index from an
+existing meta/episodes.jsonl if output_dir already has one (so re-running against
+the same --output CONTINUES a dataset instead of overwriting episode_000000
+onward), and finalize() recomputes stats.json fresh from every parquet file on
+disk (not from in-memory state) so it is correct regardless of process restarts.
+Call finalize() after every episode, not just at the very end of a run — a killed
+process (spot preemption, crash, Ctrl-C) then leaves the dataset fully loadable up
+through the last episode that finished, instead of with no meta files at all.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -74,8 +84,7 @@ class LeRobotRecorder:
         self._episode_index = 0        # next WRITTEN episode index
         self._global_frame_index = 0   # next global frame index across written episodes
         self._episodes_meta: list[dict] = []
-        self._all_states: list[np.ndarray] = []
-        self._all_actions: list[np.ndarray] = []
+        self._resume_from_existing_dataset()
 
         self._recording = False
         self._buf_state: list[np.ndarray] = []
@@ -89,6 +98,60 @@ class LeRobotRecorder:
     def num_episodes_written(self) -> int:
         return self._episode_index
 
+    def _resume_from_existing_dataset(self) -> None:
+        """If output_dir already has a dataset (from a prior/interrupted run), resume
+        episode_index/global_frame_index from it instead of starting at 0 and
+        silently overwriting episode_000000 onward."""
+        episodes_path = self._root / "meta" / "episodes.jsonl"
+        if not episodes_path.exists():
+            return
+        with open(episodes_path) as f:
+            self._episodes_meta = [json.loads(line) for line in f if line.strip()]
+        self._episode_index = len(self._episodes_meta)
+        self._global_frame_index = sum(ep["length"] for ep in self._episodes_meta)
+
+        tasks_path = self._root / "meta" / "tasks.jsonl"
+        if tasks_path.exists():
+            with open(tasks_path) as f:
+                existing_tasks = [json.loads(line)["task"] for line in f if line.strip()]
+            if existing_tasks != self._task_descriptions:
+                raise ValueError(
+                    f"Resuming into {self._root}, but its meta/tasks.jsonl {existing_tasks} "
+                    f"doesn't match the task_descriptions passed now {self._task_descriptions} — "
+                    "existing episodes' task_index values would silently point at the wrong task."
+                )
+
+        # Guard against resuming with a CHANGED schema (e.g. state/action dims edited,
+        # or a different camera set) — without this, old and new episodes would
+        # silently coexist with different observation.state/action shapes or missing
+        # video keys, which GR00T's loader assumes is impossible (one fixed schema
+        # per dataset) and would fail on in a confusing way.
+        info_path = self._root / "meta" / "info.json"
+        if info_path.exists():
+            existing_info = json.loads(info_path.read_text())
+            expected_state_dim = sum(m.dim for m in self._state_mods)
+            expected_action_dim = sum(m.dim for m in self._action_mods)
+            existing_state_dim = existing_info["features"]["observation.state"]["shape"][0]
+            existing_action_dim = existing_info["features"]["action"]["shape"][0]
+            existing_cameras = sorted(
+                k for k in existing_info["features"] if k.startswith("observation.images.")
+            )
+            expected_cameras = sorted(f"observation.images.{cam}" for cam in self._cameras)
+            mismatches = []
+            if existing_state_dim != expected_state_dim:
+                mismatches.append(f"state_dim {existing_state_dim} -> {expected_state_dim}")
+            if existing_action_dim != expected_action_dim:
+                mismatches.append(f"action_dim {existing_action_dim} -> {expected_action_dim}")
+            if existing_cameras != expected_cameras:
+                mismatches.append(f"cameras {existing_cameras} -> {expected_cameras}")
+            if mismatches:
+                raise ValueError(
+                    f"Resuming into {self._root}, but its meta/info.json schema doesn't match "
+                    f"what's being recorded now: {'; '.join(mismatches)}. Existing episodes would "
+                    "silently have a different observation.state/action shape or camera set than "
+                    "new ones — use a fresh output directory instead."
+                )
+
     # ------------------------------------------------------------------
     # Episode lifecycle
     # ------------------------------------------------------------------
@@ -98,10 +161,17 @@ class LeRobotRecorder:
         self._buf_action = []
         self._buf_timestamp = []
         self._buf_task_idx = []
-        self._raw_video_paths = {
-            cam: Path(tempfile.mkstemp(suffix=f"_{cam}.rgb24")[1]) for cam in self._cameras
-        }
-        self._raw_video_files = {cam: open(path, "wb") for cam, path in self._raw_video_paths.items()}
+        self._raw_video_paths = {}
+        self._raw_video_files = {}
+        for cam in self._cameras:
+            # mkstemp() itself opens and returns a real fd (for atomic/secure creation);
+            # discarding it and calling open(path) separately — the original bug here —
+            # leaks that fd for the life of the process: unlink() only removes the
+            # directory entry, so every still-open fd keeps its ~1-3GB backing file
+            # alive on disk. os.fdopen() reuses the SAME fd instead of opening a new one.
+            fd, path = tempfile.mkstemp(suffix=f"_{cam}.rgb24")
+            self._raw_video_paths[cam] = Path(path)
+            self._raw_video_files[cam] = os.fdopen(fd, "wb")
         self._recording = True
 
     def record_step(
@@ -165,8 +235,6 @@ class LeRobotRecorder:
             "tasks": [self._task_descriptions[i] for i in seen_task_indices],
             "length": num_frames,
         })
-        self._all_states.append(states)
-        self._all_actions.append(actions)
 
         self._episode_index += 1
         self._global_frame_index += num_frames
@@ -244,14 +312,33 @@ class LeRobotRecorder:
         with open(meta_dir / "info.json", "w") as f:
             json.dump(self._build_info(), f, indent=2)
 
-        stats = {}
-        if self._all_states:
-            all_states = np.concatenate(self._all_states, axis=0)
-            all_actions = np.concatenate(self._all_actions, axis=0)
-            stats["observation.state"] = self._array_stats(all_states)
-            stats["action"] = self._array_stats(all_actions)
         with open(meta_dir / "stats.json", "w") as f:
-            json.dump(stats, f, indent=2)
+            json.dump(self._compute_stats(), f, indent=2)
+
+    def _compute_stats(self) -> dict:
+        """Read every written episode's parquet file fresh off disk (not from
+        in-memory buffers) so stats.json is correct regardless of whether this
+        process wrote all those episodes or resumed a prior run's dataset.
+
+        Reads by episode_index from self._episodes_meta (the episodes.jsonl source
+        of truth) rather than globbing the directory — a process killed mid-write
+        can leave an orphaned truncated parquet file at an episode_index that was
+        never recorded in episodes.jsonl (the crash happened before close_episode()
+        finished), and glob() would pick that garbage file up and crash pyarrow.
+        """
+        chunk_dir = self._root / "data" / f"chunk-{self._chunk:03d}"
+        parquet_paths = [chunk_dir / f"episode_{ep['episode_index']:06d}.parquet" for ep in self._episodes_meta]
+        if not parquet_paths:
+            return {}
+        states, actions = [], []
+        for p in parquet_paths:
+            table = pq.read_table(p, columns=["observation.state", "action"])
+            states.append(np.asarray(table.column("observation.state").to_pylist(), dtype=np.float32))
+            actions.append(np.asarray(table.column("action").to_pylist(), dtype=np.float32))
+        return {
+            "observation.state": self._array_stats(np.concatenate(states, axis=0)),
+            "action": self._array_stats(np.concatenate(actions, axis=0)),
+        }
 
     def _build_info(self) -> dict:
         total_episodes = len(self._episodes_meta)
@@ -324,9 +411,13 @@ class LeRobotRecorder:
 
     @staticmethod
     def _array_stats(arr: np.ndarray) -> dict[str, list[float]]:
+        # GR00T's stats.json validator (gr00t/data/stats.py check_stats_validity) requires
+        # exactly these 6 keys per feature — q01/q99 back the percentile normalization mode.
         return {
             "min": arr.min(axis=0).tolist(),
             "max": arr.max(axis=0).tolist(),
             "mean": arr.mean(axis=0).tolist(),
             "std": arr.std(axis=0).tolist(),
+            "q01": np.quantile(arr, 0.01, axis=0).tolist(),
+            "q99": np.quantile(arr, 0.99, axis=0).tolist(),
         }

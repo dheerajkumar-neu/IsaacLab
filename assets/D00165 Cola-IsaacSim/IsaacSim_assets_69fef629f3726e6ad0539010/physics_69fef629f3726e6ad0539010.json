@@ -1,0 +1,81 @@
+{
+  "parts": [
+    {
+      "canonical_name": "part_00",
+      "part_name": "D00165 Cola",
+      "source_part_name": "D00165 Cola",
+      "source_object_name": "D00165 Cola",
+      "part_index": 0,
+      "part_id": "part_00",
+      "material_name": "painted_aluminum",
+      "material": "painted_aluminum",
+      "non_visual_material": null,
+      "mass": 0.378,
+      "density": 900.0,
+      "inertia": [
+        0.00014844784507740552,
+        0.0003905405408391329,
+        0.00039120381296755115
+      ],
+      "inertia_axes": [
+        0.5149127248952966,
+        0.4846862218793881,
+        -0.5147973956989941,
+        0.4846935046425925
+      ],
+      "center_of_mass": [
+        1.5602818617167862e-06,
+        -6.165197834998109e-06,
+        0.05145393172213379
+      ],
+      "part_origin_world": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "volume": 0.0002536630919245521,
+      "bounds": {
+        "min": [
+          -0.028672000393271446,
+          -0.028540000319480896,
+          -4.099999932805076e-05
+        ],
+        "max": [
+          0.028728999197483063,
+          0.028411999344825745,
+          0.10368599742650986
+        ],
+        "center": [
+          6.86483186385929e-05,
+          3.113262139825162e-06,
+          0.05398470171510348
+        ]
+      },
+      "description": "A red lacquered aluminum soda can with white graphics, rolled silver rims, and a pull-tab top.",
+      "semantic": {
+        "qid": null
+      },
+      "reasoning": "The object is an unopened 350 ml aluminum beverage can. A typical 350 ml can has an outside diameter of about 66 mm and height of about 122 mm, giving a bounding cylindrical volume of roughly 4.2e-4 m\u00b3. The liquid contents dominate the mass: cola is approximately 1.03\u20131.05 kg/L, so 350 ml contributes about 0.36 kg, plus about 0.013\u20130.016 kg for the thin aluminum can body and tab. A total mass of 0.378 kg is therefore appropriate for a full sealed can. The effective rigid-body density is based on total mass divided by the outside occupied volume, not solid aluminum density, giving about 900 kg/m\u00b3. The dominant external/contact material is painted or lacquered aluminum; the bottom contact is usually a rolled aluminum rim with a smooth coating. Dry static friction against common hard surfaces is estimated around 0.40\u20130.45 and dynamic friction around 0.30\u20130.35. Restitution is set low, about 0.12, because the thin shell and internal liquid dissipate impact energy even though aluminum itself is metallic. For Isaac Sim/PhysX, the can should be treated as a single dynamic rigid body with center of mass near the geometric center. A convex decomposition or simplified compound collider is preferable to a raw triangle mesh: use a cylindrical main body with slight rim features, or convex decomposition if the pull tab and rolled edges must influence contact. For most robotic/industrial contact tasks, avoid high-detail SDF or triangle mesh collision on a dynamic can unless precise top geometry is required. Small-object contact offsets should be much smaller than default large-scene values; about 0.002 m contact offset and 0.0 m rest offset are suitable for stable table contact without visible hovering. Continuous collision detection is recommended if the can may be thrown, dropped, or moved quickly by grippers. Compliant contacts are disabled because this is modeled as a rigid object; if denting behavior is desired, it should be handled by a deformable or specialized approximation rather than a standard rigid-body material.",
+      "static_friction": 0.42,
+      "dynamic_friction": 0.32,
+      "restitution": 0.12,
+      "friction_combine_mode": "average",
+      "restitution_combine_mode": "average",
+      "physics_type": "rigid",
+      "is_structural_root": true,
+      "color_name": ""
+    }
+  ],
+  "joint_relations": [],
+  "base_link": "D00165 Cola",
+  "object_description": "A red lacquered aluminum soda can with white graphics, rolled silver rims, and a pull-tab top.",
+  "object_semantic": {
+    "qid": null
+  },
+  "total_mass": 0.378,
+  "center_of_mass": null,
+  "inertia": null,
+  "overall_assessment": "",
+  "num_parts": 1,
+  "object_type": "rigid_bodies"
+}

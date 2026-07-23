@@ -431,10 +431,15 @@ def _get_joint_ids(robot: Articulation) -> tuple[list[int], list[int]]:
 class _EpisodeRecorder:
     """Per-episode glue between the control loop and LeRobotRecorder.
 
-    Tracks the in-episode step index (for `timestamp`) and pulls the state/camera
-    data LeRobotRecorder needs straight from the scene at the moment each action is
-    actually applied — recording here (not from a physics-settle loop) means every
-    row's `action` is the real env.step() input.
+    Behavior-cloning convention: row i must be (obs_i, action_i) where obs_i is the
+    state BEFORE action_i is applied (IsaacLab's own native recorder captures obs at
+    record_pre_step(), before the physics decimation loop — see recorders.py
+    PreStepFlatPolicyObservationsRecorder). So capture_pre_step() must be called
+    BEFORE env.step(), and commit_step() AFTER — pairing the pre-step snapshot with
+    the action that was just sent. Calling record() with both after env.step() (the
+    original implementation) pairs each action with the state it PRODUCED instead of
+    the state it was chosen from — a silent off-by-one that would train the model
+    backwards.
     """
 
     def __init__(
@@ -454,25 +459,36 @@ class _EpisodeRecorder:
         self._step_dt = step_dt
         self._step_idx = 0
         self._task_index = 0
+        self._pending_state: np.ndarray | None = None
+        self._pending_frames: dict[str, np.ndarray] | None = None
 
     def start_episode(self) -> None:
         self._step_idx = 0
         self._task_index = 0
+        self._pending_state = None
+        self._pending_frames = None
         self._recorder.start_episode()
 
     def set_task_index(self, task_index: int) -> None:
-        """Mark which OBJECT_TASK_DESCRIPTIONS entry subsequent record() calls belong to."""
+        """Mark which OBJECT_TASK_DESCRIPTIONS entry subsequent steps belong to."""
         self._task_index = task_index
 
-    def record(self, env: ManagerBasedEnv, action: torch.Tensor) -> None:
-        state = torch.cat([
+    def capture_pre_step(self, env: ManagerBasedEnv) -> None:
+        """Snapshot state/camera frames BEFORE the action for this step is applied."""
+        self._pending_state = torch.cat([
             self._robot.data.joint_pos[0, self._arm_joint_ids],
             self._robot.data.joint_pos[0, self._finger_joint_ids],
         ]).detach().cpu().numpy()
+        self._pending_frames = {
+            cam: env.scene[cam].data.output["rgb"][0].detach().cpu().numpy() for cam in self._cameras
+        }
+
+    def commit_step(self, action: torch.Tensor) -> None:
+        """Pair the pre-step snapshot with the action just sent to env.step()."""
         action_np = action[0].detach().cpu().numpy()
-        frames = {cam: env.scene[cam].data.output["rgb"][0].detach().cpu().numpy() for cam in self._cameras}
         self._recorder.record_step(
-            state, action_np, frames, timestamp=self._step_idx * self._step_dt, task_index=self._task_index
+            self._pending_state, action_np, self._pending_frames,
+            timestamp=self._step_idx * self._step_dt, task_index=self._task_index,
         )
         self._step_idx += 1
 
@@ -501,13 +517,17 @@ def _step_env(
     Returns:
         True if the env auto-reset during this step.
     """
+    # Snapshot BEFORE stepping: obs_i must be the state action_i was chosen from, not
+    # the state it produced (see _EpisodeRecorder docstring).
+    if recorder_ctx is not None:
+        recorder_ctx.capture_pre_step(env)
     _, _, terminated, truncated, _ = env.step(action)
     env_reset = bool(terminated[0].item()) or bool(truncated[0].item())
-    # Records the real action just applied. If this step also triggered an auto-reset,
-    # the row reflects the post-reset (teleported) state — harmless, since the caller
-    # aborts and the whole episode is discarded unwritten in that case.
+    # If this step also triggered an auto-reset, the row still holds the correct
+    # pre-reset (obs_i, action_i) pair — harmless either way, since the caller aborts
+    # and the whole episode is discarded unwritten in that case.
     if recorder_ctx is not None:
-        recorder_ctx.record(env, action)
+        recorder_ctx.commit_step(action)
     return env_reset
 
 
@@ -1284,6 +1304,10 @@ def main() -> None:
         episode_success = (num_packed == len(OBJECT_NAMES)) and not episode_aborted
 
         written = episode_recorder.close_episode(episode_success)
+        # Persist meta/*.json after EVERY episode (not just at the very end of the run) —
+        # a killed process (spot preemption, crash, Ctrl-C) then leaves the dataset fully
+        # loadable up through the last completed episode, instead of with no meta at all.
+        recorder.finalize()
         logging.info(
             "  Episode done — packed %d/3, success=%s%s | %s",
             num_packed, episode_success, " (aborted: env auto-reset)" if episode_aborted else "",

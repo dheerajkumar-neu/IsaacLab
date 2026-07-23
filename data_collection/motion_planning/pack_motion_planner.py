@@ -52,7 +52,7 @@ PLACE_SLOT_MARGIN: float = 0.5
 # pose before planning (metres). Raw grasps can land shallow — fingers close
 # on the object's edge rather than around its body, which slips on sideways
 # or curved-surface grasps. Increase to bite deeper; trial-and-error knob.
-GRASP_DEPTH_OFFSET: float = 0.03
+GRASP_DEPTH_OFFSET: float = 0.02
 
 
 class PackMotionPlanner:
