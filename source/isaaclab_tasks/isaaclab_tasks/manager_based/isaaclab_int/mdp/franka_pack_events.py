@@ -131,12 +131,59 @@ def randomize_scene_lighting_domelight(
         texture_file_attr.Set(new_texture)
 
 
+# Cache of measured horizontal (x/y) footprint radius per asset name — the USD bbox
+# read is fixed geometry, so it only needs computing once per asset per process.
+_OBJECT_RADIUS_CACHE: dict[str, float] = {}
+
+
+def _measure_horizontal_radius(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg) -> float:
+    """Measure an object's horizontal footprint radius from its actual USD geometry.
+
+    Uses the prim's LOCAL bound (its own authored/model-space extent), not the
+    current world bound — this stays correct even if the object is currently lying
+    tipped over from the end of a previous episode, since local geometry doesn't
+    change with the root prim's current world transform. Generic over whatever
+    asset is spawned in this slot: swapping in a bigger/smaller object changes the
+    measured radius automatically, no per-object-set tuning needed.
+    """
+    if asset_cfg.name in _OBJECT_RADIUS_CACHE:
+        return _OBJECT_RADIUS_CACHE[asset_cfg.name]
+
+    from pxr import Usd, UsdGeom
+
+    asset = env.scene[asset_cfg.name]
+    # cfg.prim_path holds the {ENV_REGEX_NS} token pre-spawn but a resolved regex
+    # (e.g. "/World/envs/env_.*/Object01") post-spawn — neither is a queryable path.
+    # root_physx_view.prim_paths holds the actual per-instance concrete paths (same
+    # pattern already used in data_collection/grasp_client/graspgenx_client.py).
+    prim_path = asset.root_physx_view.prim_paths[0]
+    prim = env.sim.stage.GetPrimAtPath(prim_path)
+    if not prim.IsValid():
+        raise RuntimeError(f"_measure_horizontal_radius: no valid prim at {prim_path!r}")
+    bbox_cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
+    box = bbox_cache.ComputeLocalBound(prim).ComputeAlignedBox()
+    lo, hi = box.GetMin(), box.GetMax()
+    radius = max(hi[0] - lo[0], hi[1] - lo[1]) / 2.0
+
+    _OBJECT_RADIUS_CACHE[asset_cfg.name] = radius
+    return radius
+
+
 def sample_object_poses(
     num_objects: int,
     min_separation: float = 0.0,
     pose_range: dict[str, tuple[float, float]] = {},
     max_sample_tries: int = 5000,
+    radii: list[float] | None = None,
+    radius_margin: float = 0.0,
 ):
+    """Sample `num_objects` poses from `pose_range` via rejection sampling.
+
+    Required pairwise separation is `max(min_separation, radii[i] + radii[j] +
+    radius_margin)` when `radii` is given — i.e. it's derived from each object's
+    OWN measured size, so it generalizes to whatever objects are actually in play
+    instead of a single flat distance tuned for one specific object set.
+    """
     range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
     pose_list = []
 
@@ -150,8 +197,15 @@ def sample_object_poses(
                 break
 
             # Check if pose of object is sufficiently far away from all other objects
-            separation_check = [math.dist(sample[:3], pose[:3]) > min_separation for pose in pose_list]
-            if False not in separation_check:
+            separation_ok = True
+            for k, pose in enumerate(pose_list):
+                required = min_separation
+                if radii is not None:
+                    required = max(required, radii[i] + radii[k] + radius_margin)
+                if math.dist(sample[:3], pose[:3]) <= required:
+                    separation_ok = False
+                    break
+            if separation_ok:
                 pose_list.append(sample)
                 break
 
@@ -165,9 +219,13 @@ def randomize_object_pose(
     min_separation: float = 0.0,
     pose_range: dict[str, tuple[float, float]] = {},
     max_sample_tries: int = 5000,
+    use_object_radii: bool = False,
+    radius_margin: float = 0.0,
 ):
     if env_ids is None:
         return
+
+    radii = [_measure_horizontal_radius(env, cfg) for cfg in asset_cfgs] if use_object_radii else None
 
     # Randomize poses in each environment independently
     for cur_env in env_ids.tolist():
@@ -176,6 +234,8 @@ def randomize_object_pose(
             min_separation=min_separation,
             pose_range=pose_range,
             max_sample_tries=max_sample_tries,
+            radii=radii,
+            radius_margin=radius_margin,
         )
 
         # Randomize pose for each object

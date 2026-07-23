@@ -61,13 +61,17 @@ class EventCfg:
         },
     )
 
-    # Objects are randomized on the table surface
+    # Objects are randomized on the table surface. Required separation is derived from
+    # each object's OWN measured USD footprint (use_object_radii) plus radius_margin —
+    # not a flat distance tuned for one specific object set, so swapping in a
+    # bigger/smaller object automatically gets a correctly-scaled safe spawn distance.
     reset_objects_pose = EventTerm(
         func=franka_pack_events.randomize_object_pose,
         mode="reset",
         params={
             "pose_range": {"x": (0.0, 0.2), "y": (0.45, 0.75), "z": (0.2, 0.2), "yaw": (0.0, 0.0), "roll": (0.0, 0.0), "pitch": (0, 0)},
-            "min_separation": 0.1,
+            "use_object_radii": True,
+            "radius_margin": 0.03,
             "asset_cfgs": [
                 SceneEntityCfg("object_01"),
                 SceneEntityCfg("object_02"),
@@ -159,8 +163,9 @@ class FrankaPackEnvCfg(IsaaclabIntEnvCfg):
                 # usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/YCB/Axis_Aligned_Physics/006_mustard_bottle.usd",
                 usd_path=str(
                     _ISAACLAB_ASSETS_DIR
-                    / "N02017 Whitepackerbottle-IsaacSim"
-                    / "IsaacSim_asset_69eca8e8c917ed99cd3ad807.usd"
+                    / "D00165 Cola-IsaacSim"
+                    / "IsaacSim_assets_69fef629f3726e6ad0539010"
+                    / "IsaacSim_asset_69fef629f3726e6ad0539010.usd"
                 ),
                 scale=(1.0, 1.0, 1.0),
                 rigid_props=object_properties,
